@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <string name="app_name">P1_gatinhos</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string android:id="@+id/nome" android:layout_height="wrap_content" android:layout_width="wrap_content" name="nome">nome</string>
+    <string android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/idade" name="idade">idade</string>
+    <string android:id="@+id/AddGato" android:layout_width="wrap_content" android:layout_height="wrap_content" name="AddGato">Adicionar gato</string>
+    <string android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/ApreGatos" name="ApreGatos">Apresentar gatos</string>
+    <string android:layout_height="wrap_content" android:id="@+id/ApagarGatos" android:layout_width="wrap_content" name="ApagarGatos">Apagar Gatos</string>
+    <string android:id="@+id/ngatos" android:layout_width="wrap_content" android:layout_height="wrap_content" name="ngatos">Número de gatos introduzidos: </string>
+
+</resources>
