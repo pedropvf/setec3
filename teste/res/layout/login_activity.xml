@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AbsoluteLayout
+	android:id="@+id/login_activity"
+	android:layout_width="fill_parent"
+	android:layout_height="fill_parent"
+	android:background="@color/darkgrey"
+	xmlns:android="http://schemas.android.com/apk/res/android">
+<ImageView
+	android:id="@+id/imageFF"
+	android:layout_width="105dp"
+	android:layout_height="103dp"
+	android:background="@color/white"
+	android:layout_x="104dp"
+	android:layout_y="7dp" />
+<EditText
+	android:id="@+id/editUser"
+	android:layout_width="125dp"
+	android:layout_height="29dp"
+	android:background="@color/white"
+	android:textSize="18sp"
+	android:textColor="@color/black"
+	android:layout_x="124dp"
+	android:layout_y="161dp" />
+<EditText
+	android:id="@+id/editPass"
+	android:layout_width="125dp"
+	android:layout_height="29dp"
+	android:background="@color/white"
+	android:text="************"
+	android:textSize="18sp"
+	android:textColor="@color/black"
+	android:password="true"
+	android:layout_x="125dp"
+	android:layout_y="197dp" />
+
+<TextView
+    android:id="@+id/nameApp"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_x="120dp"
+    android:layout_y="114dp"
+    android:background="@color/darkgrey"
+    android:text="BOMBEIRO APP"
+    android:textColor="@color/white" />
+
+<TextView
+    android:id="@+id/userText"
+    android:layout_width="wrap_content"
+    android:layout_height="29dp"
+    android:layout_x="70dp"
+    android:layout_y="168dp"
+    android:background="@color/darkgrey"
+    android:text="username :"
+    android:textColor="@color/white" />
+
+<TextView
+    android:id="@+id/passText"
+    android:layout_width="wrap_content"
+    android:layout_height="29dp"
+    android:layout_x="74dp"
+    android:layout_y="198dp"
+    android:background="@color/darkgrey"
+    android:text="password :"
+    android:textColor="@color/white" />
+
+<Button
+    android:id="@+id/btnLogin"
+    android:layout_width="114dp"
+    android:layout_height="26dp"
+    android:layout_x="102dp"
+    android:layout_y="258dp"
+    android:background="@color/white"
+    android:text="Login"
+    android:textColor="@color/black" />
+
+</AbsoluteLayout>
