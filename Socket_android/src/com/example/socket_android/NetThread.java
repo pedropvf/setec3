@@ -16,45 +16,58 @@ public class NetThread extends Thread{
 	String sendtxt;
 	String answer;
 	
-	NetThread(String send, TextView txtanswer){
+	NetThread(String send, Socket sock){
 		sendtxt = send;
-		answertxt = txtanswer;
+		socket = sock;
 	}
 
 	public void run(){
 		
 		try{
 			
-			socket = new Socket("172.30.4.21",4000);
-			
-			input = new DataInputStream(socket.getInputStream());
-			
 			output = new DataOutputStream(socket.getOutputStream());
 			
 			Log.d("NetThread", socket.getInetAddress().toString());
 			
 			output.writeUTF(sendtxt);
-			answer = input.readUTF();
-			
-			answertxt.post(new Runnable(){ // 
-
-				public void run() {
-					try {
-						answertxt.setText(answer);
-					} catch (Exception e) {
-						answertxt.setText(e.toString());
-					}
-				}	
-			});
-			
-			socket.close();
-			input.close();
-			output.close();
 			
 		}catch (Exception e){
 			Log.e("NetThread",e.toString());
 		}
 		
+		
 	}
 
 }
+/*
+try{
+	
+	socket = new Socket("89.155.159.210",5132);
+	
+	input = new DataInputStream(socket.getInputStream());
+	
+	output = new DataOutputStream(socket.getOutputStream());
+	
+	Log.d("NetThread", socket.getInetAddress().toString());
+	
+	output.writeUTF(sendtxt);
+	answer = input.readUTF();
+	
+	answertxt.post(new Runnable(){ // 
+
+		public void run() {
+			try {
+				answertxt.setText(answer);
+			} catch (Exception e) {
+				answertxt.setText(e.toString());
+			}
+		}	
+	});
+	
+	socket.close();
+	input.close();
+	output.close();
+	
+}catch (Exception e){
+	Log.e("NetThread",e.toString());
+}*/

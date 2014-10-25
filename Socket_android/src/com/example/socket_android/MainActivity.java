@@ -1,13 +1,13 @@
 package com.example.socket_android;
 
+import java.net.Socket;
+
 import android.app.Activity;
 import android.content.Context;
 import android.view.View.OnClickListener;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -18,6 +18,7 @@ public class MainActivity extends Activity implements OnClickListener{
 	private Button botao1;
 	TextView received_textview;
 	EditText EditText1;
+	public Socket socket = null;
 	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,12 +31,15 @@ public class MainActivity extends Activity implements OnClickListener{
         received_textview = (TextView)findViewById(R.id.received);
         EditText1 = (EditText)findViewById(R.id.edit1);
         
+        ReadNet r_net = new ReadNet(received_textview,this);
+    	r_net.start();
+        
     }
 
     public void onClick(View v) {    	
     	
     	String str_send = EditText1.getText().toString();
-    	NetThread t_net = new NetThread(str_send, received_textview);
+    	NetThread t_net = new NetThread(str_send, socket);
     	t_net.start();
 	}
     
