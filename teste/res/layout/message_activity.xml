@@ -1,63 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
-<AbsoluteLayout
-	android:id="@+id/messages_activity"
-	android:layout_width="fill_parent"
-	android:layout_height="fill_parent"
-	android:background="@color/darkgrey"
+<RelativeLayout
+	android:id="@+id/msg_activity"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:background="@color/darkgray"
 	xmlns:android="http://schemas.android.com/apk/res/android">
-<TextView
-	android:id="@+id/textMessage"
-	android:layout_width="235dp"
+<Button
+	android:id="@+id/btnMsg5"
+	android:layout_width="209dp"
 	android:layout_height="wrap_content"
-	android:background="@color/black"
+	android:background="@color/white"
+	android:text="mensagem 5"
+	android:textColor="@color/black"
+	android:gravity="center"
+	android:layout_below="@+id/btnMsg4"
+	android:layout_alignLeft="@+id/btnMsg4" />
+<Button
+	android:id="@+id/btnMsg4"
+	android:layout_width="209dp"
+	android:layout_height="wrap_content"
+	android:background="@color/white"
+	android:text="mensagem 4"
+	android:textColor="@color/black"
+	android:gravity="center"
+	android:layout_below="@+id/btnMsg3"
+	android:layout_alignLeft="@+id/btnMsg3" />
+<Button
+	android:id="@+id/btnMsg3"
+	android:layout_width="209dp"
+	android:layout_height="wrap_content"
+	android:background="@color/white"
+	android:text="mensagem 3"
+	android:textColor="@color/black"
+	android:gravity="center"
+	android:layout_below="@+id/btnMsg2"
+	android:layout_alignLeft="@+id/btnMsg2" />
+<Button
+	android:id="@+id/btnMsg2"
+	android:layout_width="209dp"
+	android:layout_height="wrap_content"
+	android:background="@color/white"
+	android:text="mensagem 2"
+	android:textColor="@color/black"
+	android:gravity="center"
+	android:layout_below="@+id/btnMsg1"
+	android:layout_alignLeft="@+id/btnMsg1" />
+<Button
+	android:id="@+id/btnMsg1"
+	android:layout_width="209dp"
+	android:layout_height="wrap_content"
+	android:background="@color/white"
+	android:text="mensagem 1"
+	android:textColor="@color/black"
+	android:gravity="center"
+	android:layout_below="@+id/textMsg"
+	android:layout_alignLeft="@+id/textMsg" />
+<TextView
+	android:id="@+id/textMsg"
+	android:layout_width="wrap_content"
+	android:layout_height="wrap_content"
+	android:background="@color/darkgray"
 	android:text="ENVIAR MENSAGEM:"
+	android:textSize="20sp"
 	android:textColor="@color/white"
 	android:gravity="center"
-	android:layout_x="45dp"
-	android:layout_y="28dp" />
-
-<Button
-    android:id="@+id/btnMsg1"
-    android:layout_width="wrap_content"
-    android:layout_height="44dp"
-    android:layout_x="120dp"
-    android:layout_y="75dp"
-    android:background="@color/white"
-    android:gravity="center"
-    android:text="Estou perdido."
-    android:textColor="@color/black" />
-
-<Button
-    android:id="@+id/btnMsg4"
-    android:layout_width="wrap_content"
-    android:layout_height="44dp"
-    android:layout_x="114dp"
-    android:layout_y="278dp"
-    android:background="@color/white"
-    android:gravity="center"
-    android:text="chamas a aumentar"
-    android:textColor="@color/black" />
-
-<Button
-    android:id="@+id/btnMsg2"
-    android:layout_width="wrap_content"
-    android:layout_height="44dp"
-    android:layout_x="126dp"
-    android:layout_y="141dp"
-    android:background="@color/white"
-    android:gravity="center"
-    android:text="Preciso Agua"
-    android:textColor="@color/black" />
-
-<Button
-    android:id="@+id/btnMsg3"
-    android:layout_width="wrap_content"
-    android:layout_height="44dp"
-    android:layout_x="112dp"
-    android:layout_y="210dp"
-    android:background="@color/white"
-    android:gravity="center"
-    android:text="Dificuldades tecnicas"
-    android:textColor="@color/black" />
-
-</AbsoluteLayout>
+	android:layout_alignParentTop="true"
+	android:layout_centerHorizontal="true" />
+</RelativeLayout>
