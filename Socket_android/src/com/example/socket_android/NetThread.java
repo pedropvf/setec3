@@ -31,11 +31,15 @@ public class NetThread extends Thread{
 			
 			output.writeUTF(sendtxt);
 			
+			if(sendtxt.equals("sair")){
+				output.close();
+				socket.close();
+				return;
+			}
 		}catch (Exception e){
 			Log.e("NetThread",e.toString());
 		}
-		
-		
+	
 	}
 
 }

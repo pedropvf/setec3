@@ -22,7 +22,7 @@ public class ReadNet extends Thread{
 	public void run(){
 		
 		try {
-			socket = new Socket("89.155.159.210",5132);
+			socket = new Socket("192.168.1.101",4000);
 			main.socket = socket;
 		} catch (Exception e) {
 			Log.e("NetThread",e.toString());
@@ -37,8 +37,6 @@ public class ReadNet extends Thread{
 				
 				answer = input.readUTF();
 				
-				if(answer.equals("sair")) break;
-				
 				answertxt.post(new Runnable(){ // 
 	
 					public void run() {
@@ -52,16 +50,17 @@ public class ReadNet extends Thread{
 				
 			}catch (Exception e){
 				Log.e("NetThread",e.toString());
+				return;				
 			}
 			
 		}
 		
-		try {
+		/*try {
 			socket.close();
 			input.close();
 		} catch (Exception e) {
 			Log.e("NetThread",e.toString());
-		}
+		}*/
 		
 		
 	}
