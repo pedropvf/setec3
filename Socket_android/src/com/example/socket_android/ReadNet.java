@@ -14,6 +14,8 @@ public class ReadNet extends Thread{
 	String answer;
 	MainActivity main;
 	
+	//comment
+	
 	ReadNet(TextView txtanswer, MainActivity _main){
 		answertxt = txtanswer;
 		main = _main;

@@ -33,6 +33,7 @@ public class MainActivity extends Activity implements OnClickListener{
         
         ReadNet r_net = new ReadNet(received_textview,this);
     	r_net.start();
+    	//commmmeent
         
     }
 

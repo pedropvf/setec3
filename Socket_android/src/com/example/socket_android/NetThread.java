@@ -9,6 +9,8 @@ import android.widget.TextView;
 
 public class NetThread extends Thread{
 	
+	//comment
+	
 	TextView answertxt;
 	DataInputStream input;
 	DataOutputStream output;

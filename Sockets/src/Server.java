@@ -13,6 +13,8 @@ public class Server {
 	
 	public static void main(String[] args) {
 		
+		//coments
+		
 		System.out.println("iniciado servidor");
 		ServerSocket serversocket = null;
 		
