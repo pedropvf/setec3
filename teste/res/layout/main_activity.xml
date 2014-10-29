@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+	android:id="@+id/main_activity"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:background="@color/darkgray"
+	xmlns:android="http://schemas.android.com/apk/res/android">
+<Button
+	android:id="@+id/btnSOS"
+	android:layout_width="222dp"
+	android:layout_height="wrap_content"
+	android:background="@color/red"
+	android:text="SOS"
+	android:textColor="@color/white"
+	android:gravity="center"
+	android:layout_below="@+id/btnLinha"
+	android:layout_alignLeft="@+id/btnLinha" />
+<Button
+	android:id="@+id/btnLinha"
+	android:layout_width="222dp"
+	android:layout_height="wrap_content"
+	android:background="@color/white"
+	android:text="Detectar Linha de Fogo"
+	android:textColor="@color/black"
+	android:layout_below="@+id/btnMsg"
+	android:layout_alignLeft="@+id/btnMsg" />
+<Button
+	android:id="@+id/btnMsg"
+	android:layout_width="222dp"
+	android:layout_height="wrap_content"
+	android:background="@color/white"
+	android:text="Enviar Mensagem"
+	android:textColor="@color/black"
+	android:gravity="center"
+	android:layout_below="@+id/textBE"
+	android:layout_alignLeft="@+id/textBE" />
+<EditText
+	android:id="@+id/textBE"
+	android:layout_width="222dp"
+	android:layout_height="100dp"
+	android:background="@color/white"
+	android:text="BE: vai para NW"
+	android:textSize="10sp"
+	android:textColor="@color/black"
+	android:gravity="center"
+	android:layout_below="@+id/infoBE"
+	android:layout_alignLeft="@+id/infoBE" />
+<TextView
+	android:id="@+id/infoBE"
+	android:layout_width="wrap_content"
+	android:layout_height="wrap_content"
+	android:background="@color/darkgray"
+	android:text="informa&#231;&#245;es BackEnd"
+	android:textSize="20sp"
+	android:textColor="@color/white"
+	android:gravity="center"
+	android:layout_alignParentTop="true"
+	android:layout_centerHorizontal="true" />
+</RelativeLayout>

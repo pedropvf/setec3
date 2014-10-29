@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+	android:id="@+id/msg_activity"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:background="@color/darkgray"
+	xmlns:android="http://schemas.android.com/apk/res/android">
+<Button
+	android:id="@+id/btnMsg5"
+	android:layout_width="209dp"
+	android:layout_height="wrap_content"
+	android:background="@color/white"
+	android:text="mensagem 5"
+	android:textColor="@color/black"
+	android:gravity="center"
+	android:layout_below="@+id/btnMsg4"
+	android:layout_alignLeft="@+id/btnMsg4" />
+<Button
+	android:id="@+id/btnMsg4"
+	android:layout_width="209dp"
+	android:layout_height="wrap_content"
+	android:background="@color/white"
+	android:text="mensagem 4"
+	android:textColor="@color/black"
+	android:gravity="center"
+	android:layout_below="@+id/btnMsg3"
+	android:layout_alignLeft="@+id/btnMsg3" />
+<Button
+	android:id="@+id/btnMsg3"
+	android:layout_width="209dp"
+	android:layout_height="wrap_content"
+	android:background="@color/white"
+	android:text="mensagem 3"
+	android:textColor="@color/black"
+	android:gravity="center"
+	android:layout_below="@+id/btnMsg2"
+	android:layout_alignLeft="@+id/btnMsg2" />
+<Button
+	android:id="@+id/btnMsg2"
+	android:layout_width="209dp"
+	android:layout_height="wrap_content"
+	android:background="@color/white"
+	android:text="mensagem 2"
+	android:textColor="@color/black"
+	android:gravity="center"
+	android:layout_below="@+id/btnMsg1"
+	android:layout_alignLeft="@+id/btnMsg1" />
+<Button
+	android:id="@+id/btnMsg1"
+	android:layout_width="209dp"
+	android:layout_height="wrap_content"
+	android:background="@color/white"
+	android:text="mensagem 1"
+	android:textColor="@color/black"
+	android:gravity="center"
+	android:layout_below="@+id/textMsg"
+	android:layout_alignLeft="@+id/textMsg" />
+<TextView
+	android:id="@+id/textMsg"
+	android:layout_width="wrap_content"
+	android:layout_height="wrap_content"
+	android:background="@color/darkgray"
+	android:text="ENVIAR MENSAGEM:"
+	android:textSize="20sp"
+	android:textColor="@color/white"
+	android:gravity="center"
+	android:layout_alignParentTop="true"
+	android:layout_centerHorizontal="true" />
+</RelativeLayout>

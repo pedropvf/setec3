@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+	android:id="@+id/login_activity"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:background="@color/darkgray"
+	xmlns:android="http://schemas.android.com/apk/res/android">
+<EditText
+	android:id="@+id/editPass"
+	android:layout_width="wrap_content"
+	android:layout_height="30dp"
+	android:background="@color/white"
+	android:text="?????"
+	android:textSize="18sp"
+	android:textColor="@color/black"
+	android:gravity="left"
+	android:password="true"
+	android:layout_alignBaseline="@+id/textPass"
+	android:layout_alignLeft="@+id/editUser" />
+<TextView
+	android:id="@+id/textPass"
+	android:layout_width="wrap_content"
+	android:layout_height="wrap_content"
+	android:background="@color/darkgray"
+	android:text="password :"
+	android:textColor="@color/white"
+	android:gravity="center"
+	android:layout_below="@+id/editUser"
+	android:layout_alignLeft="@+id/textUser" />
+<EditText
+	android:id="@+id/editUser"
+	android:layout_width="74dp"
+	android:layout_height="30dp"
+	android:background="@color/white"
+	android:text="?????"
+	android:textSize="18sp"
+	android:textColor="@color/black"
+	android:gravity="left"
+	android:layout_alignTop="@+id/textUser"
+	android:layout_toRightOf="@+id/textUser" />
+<TextView
+	android:id="@+id/textUser"
+	android:layout_width="wrap_content"
+	android:layout_height="wrap_content"
+	android:background="@color/darkgray"
+	android:text="username :"
+	android:textColor="@color/white"
+	android:gravity="center"
+	android:layout_centerVertical="true"
+	android:layout_alignLeft="@+id/textFF" />
+<TextView
+	android:id="@+id/textFF"
+	android:layout_width="173dp"
+	android:layout_height="23dp"
+	android:background="@color/darkgray"
+	android:text="BOMBEIRO APP"
+	android:textColor="@color/white"
+	android:gravity="center"
+	android:layout_below="@+id/widget34"
+	android:layout_alignLeft="@+id/widget34" />
+<ImageView
+	android:id="@+id/widget34"
+	android:layout_width="173dp"
+	android:layout_height="98dp"
+	android:layout_alignParentTop="true"
+	android:layout_centerHorizontal="true" />
+</RelativeLayout>
