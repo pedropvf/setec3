@@ -9,7 +9,7 @@ import android.widget.TextView;
 
 public class NetThread extends Thread{
 	
-	//comment
+	//commentsjbkjbkjbkjkbkjb
 	
 	TextView answertxt;
 	DataInputStream input;
