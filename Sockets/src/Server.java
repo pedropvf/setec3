@@ -19,7 +19,7 @@ public class Server {
 		ServerSocket serversocket = null;
 		
 		try{
-			serversocket = new ServerSocket(4000);
+			serversocket = new ServerSocket(80);
 			socket = serversocket.accept();
 			
 			Write_thread send_t = new Write_thread();

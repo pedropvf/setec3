@@ -24,7 +24,7 @@ public class NetThread extends Thread{
 	}
 
 	public void run(){
-		
+		/*	
 		try{
 			
 			output = new DataOutputStream(socket.getOutputStream());
@@ -44,11 +44,11 @@ public class NetThread extends Thread{
 	
 	}
 
-}
-/*
+}*/
+
 try{
 	
-	socket = new Socket("89.155.159.210",5132);
+	socket = new Socket("setec3.fe.up.pt",80);
 	
 	input = new DataInputStream(socket.getInputStream());
 	
@@ -76,4 +76,6 @@ try{
 	
 }catch (Exception e){
 	Log.e("NetThread",e.toString());
-}*/
+}
+}
+}

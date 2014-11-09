@@ -24,7 +24,7 @@ public class ReadNet extends Thread{
 	public void run(){
 		
 		try {
-			socket = new Socket("192.168.1.101",4000);
+			socket = new Socket("setec3.fe.up.pt",80);
 			main.socket = socket;
 		} catch (Exception e) {
 			Log.e("NetThread",e.toString());
@@ -38,7 +38,7 @@ public class ReadNet extends Thread{
 				input = new DataInputStream(socket.getInputStream());
 				
 				answer = input.readUTF();
-				
+		
 				answertxt.post(new Runnable(){ // 
 	
 					public void run() {
