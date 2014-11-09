@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">TappDetect</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+
+    <!-- Main Activity Layout Artifacts  -->
+    <string name="main_title">Accelerometer Info (m.s-2)</string>
+    <string name="main_deltaX">X Delta</string>
+    <string name="main_accX">X Acc</string>
+    <string name="main_deltaY">Y Delta</string>
+    <string name="main_accY">Y Acc</string>
+    <string name="main_deltaZ">Z Delta</string>
+	<string name="main_accZ">Z Acc</string>
+    <string name="main_speed">Speed(m.s-1)</string>
+    <string name="main_obs">Observations</string>
+    
+</resources>
