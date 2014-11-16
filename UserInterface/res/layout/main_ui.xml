@@ -1,0 +1,188 @@
+<setec.g3.ui.view.viewgroup.FlyOutContainer xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clickable="false" >
+
+    <RelativeLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/view_message"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#ACC4C4" >
+
+         <ListView
+            android:id="@+id/listview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_above="@+id/message_text_box"
+            android:layout_marginBottom="10dp" >
+        </ListView>
+
+        <Button
+            android:id="@+id/btn_send_message"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_alignBaseline="@+id/message_text_box"
+            android:layout_alignParentRight="true"
+			android:background="@drawable/selector_send_message" />
+
+        <EditText
+            android:id="@+id/message_text_box"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentLeft="true"
+            android:layout_toLeftOf="@+id/btn_send_message"
+            android:ems="10"            
+            android:lines="3"
+            android:minLines="3"
+            android:inputType="textMultiLine" />
+    </RelativeLayout>
+    
+    <RelativeLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/view_settings"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#246F8F" >
+
+        <Button
+        	android:id="@+id/btn_back_from_settings"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_back_string" />
+    </RelativeLayout>
+    
+    <RelativeLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/view_pre_defined_messages"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#ACA6B0" >
+
+        <Button
+        	android:id="@+id/btn_back_from_pre_defined_messages"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_back_string" />
+    </RelativeLayout>
+    
+    <RelativeLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/view_line_of_fire"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#B07474" >
+
+        <Button
+        	android:id="@+id/btn_back_from_line_of_fire"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_back_string" />
+    </RelativeLayout>
+
+    <RelativeLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/view_primary"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#888888">
+
+        <ImageView
+            android:id="@+id/action_dial_iv"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true" />
+        
+        <ImageView
+            android:id="@+id/action_dial_circle_iv"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true" />
+        
+        <ImageView
+            android:id="@+id/line_of_fire_iv"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_above="@+id/action_dial_iv"
+            android:layout_marginBottom="150dp"
+            android:layout_centerVertical="true" />
+        
+        <ImageView
+            android:id="@+id/messages_iv"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_toRightOf="@+id/action_dial_iv"
+            android:layout_marginLeft="150dp"
+            android:layout_centerHorizontal="true" />
+        
+        <ImageView
+            android:id="@+id/settings_iv"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_below="@+id/action_dial_iv"
+            android:layout_marginTop="150dp"
+            android:layout_centerVertical="true" />
+        
+        <ImageView
+            android:id="@+id/pre_defined_messages_iv"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_toLeftOf="@+id/action_dial_iv"
+            android:layout_marginRight="150dp"
+            android:layout_centerHorizontal="true" />
+        
+        
+        
+        <Button
+            android:id="@+id/line_of_fire_selector"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:background="@drawable/selector_line_of_fire" />
+        
+        <Button
+            android:id="@+id/message_selector"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:background="@drawable/selector_message" />
+        
+        <Button
+            android:id="@+id/settings_selector"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:background="@drawable/selector_settings" />
+            
+        <Button
+            android:id="@+id/pre_defined_message_selector"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:background="@drawable/selector_pre_defined_message" />
+        
+         <Button
+            android:id="@+id/back_selector"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:background="@drawable/selector_back" />
+         
+         <Button
+            android:id="@+id/priority_selector"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:background="@drawable/selector_priority_normal" />
+        
+
+        <TextView
+            android:id="@+id/main_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentTop="true"
+            android:layout_marginTop="20dp"
+            android:clickable="false"
+            android:ems="10" />
+
+    </RelativeLayout>
+
+</setec.g3.ui.view.viewgroup.FlyOutContainer>
