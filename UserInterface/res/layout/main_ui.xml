@@ -172,6 +172,26 @@
             android:layout_height="100dp"
             android:background="@drawable/selector_priority_normal" />
         
+        <ImageView
+            android:id="@+id/compass_iv"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true" />
+        
+        <ImageView
+            android:id="@+id/sos_slider_iv"
+            android:layout_width="500dp"
+            android:layout_height="110dp"
+            android:layout_alignParentBottom="true"
+            android:layout_marginBottom="16dp" />
+        
+        <ImageView
+            android:id="@+id/sos_slider_handle_iv"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_alignParentBottom="true"
+            android:layout_marginBottom="16dp" />
 
         <TextView
             android:id="@+id/main_text"

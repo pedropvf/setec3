@@ -98,7 +98,7 @@ public class FlyOutContainer extends RelativeLayout {
 		/* message listview & messaging */
 		messageList = (ListView) findViewById(R.id.listview);
 		messageItemValues = new ArrayList<MessageItem>();
-		messageAdapter = new MessageItemArrayAdapter((Activity) this.getContext(), messageItemValues);
+		messageAdapter = new MessageItemArrayAdapter(this.getContext(), messageItemValues);
 		messageList.setAdapter(messageAdapter);
 		
 		
@@ -317,7 +317,7 @@ public class FlyOutContainer extends RelativeLayout {
 		}
 	}
 	
-	protected class SmoothInterpolator implements Interpolator{
+	static public class SmoothInterpolator implements Interpolator{
 		@Override
 		public float getInterpolation(float t) {
 			return (float)Math.pow(t-1, 5) + 1;
@@ -353,9 +353,9 @@ public class FlyOutContainer extends RelativeLayout {
 			    public TextView text;
 		  }
 
-		  public MessageItemArrayAdapter(Activity context, ArrayList<MessageItem> values) {
+		  public MessageItemArrayAdapter(Context context, ArrayList<MessageItem> values) {
 		    super(context, R.layout.row_layout, values);
-		    this.context = context;
+		    this.context = (Activity)context;
 		    this.values = values;
 		  }
 

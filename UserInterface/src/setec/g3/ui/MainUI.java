@@ -3,14 +3,12 @@ package setec.g3.ui;
 import java.util.Calendar;
 
 import setec.g3.ui.view.viewgroup.FlyOutContainer;
-import setec.g3.ui.view.viewgroup.FlyOutContainer.MessageItemPriority;
+import setec.g3.ui.view.viewgroup.FlyOutContainer.SmoothInterpolator;
 import android.app.Activity;
 import android.os.Bundle;
 import android.os.Handler;
-import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
-import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MotionEvent;
 import android.view.View;
@@ -22,12 +20,11 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.content.Context;
-import android.content.res.Resources;
 import android.widget.TextView;
 
 import setec.g3.ui.R;
 
-public class MainUI extends Activity implements OnTouchListener {
+public class MainUI extends Activity{
 
 	/* component handling variables */
 	private FlyOutContainer root;
@@ -40,7 +37,7 @@ public class MainUI extends Activity implements OnTouchListener {
 	private float x,y=0.0f;
 	protected Runnable dialAnimationRunnable = new DialAnimationRunnable();
 	protected Handler dialAnimationHandler = new Handler();
-	private static final int dialAnimationPollingInterval = 15;
+	private static final int dialAnimationPollingInterval = 10;
 	private static final int dialReturningAnimationDuration = 200;
 	private static final int dialMovementMaxRadius = 250;
 	private static final long dialAnimationInDuration = 300;
@@ -101,6 +98,17 @@ public class MainUI extends Activity implements OnTouchListener {
 	float dialTextBaseX, dialTextBaseY;
 	float dialTextWidth, dialTextHeight;
 	
+	/* Compass */
+	private ImageView compass;
+	private enum compassState { DIAL_OFF, DIAL_ON, TARGET_MODE, INVISIBLE };
+	private compassState currentCompassState = compassState.DIAL_OFF;
+	private float compassBaseX, compassBaseY;
+	
+	/* sos slider */
+	private ImageView sosSliderBase, sosHandle;
+	private float sosHandleBaseX, sosHandleBaseY;
+	private float sosSliderBaseX, sosSliderBaseY;
+	
 	/* 
 	 * Upon creation do:
 	 * 		1- inflate main_ui.xml (convert from xml into java object)
@@ -117,8 +125,13 @@ public class MainUI extends Activity implements OnTouchListener {
 		this.setContentView(root);
 		
 		initializeUI();
+		testRoutine();
 	}
 
+	public void testRoutine(){
+		setCompassAngle(0.0f);
+	}
+	
 	public void initializeUI(){
 		attachComponents();
 		addInterfaceListeners();
@@ -151,6 +164,7 @@ public class MainUI extends Activity implements OnTouchListener {
 	
 	public void prepareActionDial(){
 		float center[]=getCenterOfScreen();
+		float screenWH[]=getScreenSize();
 		distanceFromCenter=250;
 		iconSnapRadius=100;
 		
@@ -169,6 +183,7 @@ public class MainUI extends Activity implements OnTouchListener {
 		actionDialBaseY = center[1] - actionDialHeight/2.0f;
 		x=actionDialBaseX;
 		y=actionDialBaseY;
+		actioDialCurrentState=actioDialStateEnum.RETURNING;
 		
 		/* dial base */
 		RelativeLayout.LayoutParams paramsDialer = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
@@ -274,6 +289,34 @@ public class MainUI extends Activity implements OnTouchListener {
 		preDefMessagesIconBaseY=actionDialBaseY + ( (params.height-paramsDialerIcons.height) / 2 );
 		preDefMessagesIconWidth=paramsDialerIcons.width;
 		preDefMessagesIconHeight=paramsDialerIcons.height;
+		
+		/* compass */
+		RelativeLayout.LayoutParams paramsCompass = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
+		paramsCompass.height = 400;
+		paramsCompass.width = 400;
+		compass.setLayoutParams(paramsCompass);
+		compass.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+		compassBaseX=center[0] - (paramsCompass.width/2);
+		compassBaseY=center[1] - (paramsCompass.height/2);
+		updateCompassAppearance();
+		
+		/* sos slider */
+		RelativeLayout.LayoutParams sliderBase = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
+		sliderBase.height = 110;
+		sliderBase.width = 500;
+		sosSliderBase.setLayoutParams(sliderBase);
+		sosSliderBase.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+		sosSliderBaseX=center[0] - (sliderBase.width/2);
+		sosSliderBaseY=center[1] + (paramsDialer.height/2) + paramsDialerIcons.height;
+		sosHandle.setLayoutParams(paramsDialerIcons);
+		sosHandleBaseX=sosSliderBaseX + (sliderBase.height-paramsDialerIcons.height)/2;
+		sosHandleBaseY=sosSliderBaseY + (sliderBase.height-paramsDialerIcons.height)/2;
+		sosSliderBase.setX(sosSliderBaseX);
+		sosSliderBase.setY(sosSliderBaseY);
+		sosSliderBase.setImageResource(R.drawable.sos_slider_off);
+		sosHandle.setX(sosHandleBaseX);
+		sosHandle.setY(sosHandleBaseY);
+		sosHandle.setImageResource(R.drawable.sos_slider_handler_off);
 
 		/* ordering on the z axis */
 		actionDial.bringToFront();
@@ -323,6 +366,9 @@ public class MainUI extends Activity implements OnTouchListener {
 			backToSettingsBtn.setVisibility(View.VISIBLE);
 			backToPreDefinedMessageBtn.setVisibility(View.VISIBLE);
 			backToMessageBtn.setVisibility(View.VISIBLE);
+			/* sos handle */
+			sosSliderBase.setVisibility(View.INVISIBLE);
+			sosHandle.setVisibility(View.INVISIBLE);
 			break;
 		case MESSAGE:
 			backBtnX=widthAndHeight[0]-minimumBorderSpace-lineOfFireIconWidth;
@@ -359,6 +405,9 @@ public class MainUI extends Activity implements OnTouchListener {
 			backToPreDefinedMessageBtn.setVisibility(View.VISIBLE);
 			/*backToMessageBtn.setVisibility(View.VISIBLE);*/
 			prioritySelector.setVisibility(View.VISIBLE);
+			/* sos handle */
+			sosSliderBase.setVisibility(View.INVISIBLE);
+			sosHandle.setVisibility(View.INVISIBLE);
 			break;
 		case SETTINGS:
 			backBtnX=minimumBorderSpace;
@@ -390,6 +439,9 @@ public class MainUI extends Activity implements OnTouchListener {
 			/*backToSettingsBtn.setVisibility(View.VISIBLE);*/
 			backToPreDefinedMessageBtn.setVisibility(View.VISIBLE);
 			backToMessageBtn.setVisibility(View.VISIBLE);
+			/* sos handle */
+			sosSliderBase.setVisibility(View.INVISIBLE);
+			sosHandle.setVisibility(View.INVISIBLE);
 			break;
 		case PRE_DEFINED_MESSAGES:
 			backBtnX=minimumBorderSpace;
@@ -421,6 +473,9 @@ public class MainUI extends Activity implements OnTouchListener {
 			backToSettingsBtn.setVisibility(View.VISIBLE);
 			/*backToPreDefinedMessageBtn.setVisibility(View.VISIBLE);*/
 			backToMessageBtn.setVisibility(View.VISIBLE);
+			/* sos handle */
+			sosSliderBase.setVisibility(View.INVISIBLE);
+			sosHandle.setVisibility(View.INVISIBLE);
 			break;
 		case UNSELECTED:
 			backToMainBtn.setVisibility(View.INVISIBLE);
@@ -429,13 +484,46 @@ public class MainUI extends Activity implements OnTouchListener {
 			backToPreDefinedMessageBtn.setVisibility(View.INVISIBLE);
 			backToMessageBtn.setVisibility(View.INVISIBLE);
 			prioritySelector.setVisibility(View.INVISIBLE);
+			/* sos handle */
+			sosSliderBase.setVisibility(View.VISIBLE);
+			sosHandle.setVisibility(View.VISIBLE);
 			break;
 		default:
 			break;
 		}
 	}
 	
-	 /* Used to fetch the components from xml */	 
+	/* compass stuff */
+	public void setCompassMode(compassState newState){
+		currentCompassState=newState;
+		updateCompassAppearance();
+	}
+	public void updateCompassAppearance(){
+		switch (currentCompassState){
+			case DIAL_OFF:
+				compass.setVisibility(View.VISIBLE);
+				compass.setImageResource(R.drawable.compass_off);
+				break;
+			case DIAL_ON:
+				compass.setVisibility(View.VISIBLE);
+				compass.setImageResource(R.drawable.compass_on);
+				break;
+			case TARGET_MODE:
+				compass.setVisibility(View.VISIBLE);
+				compass.setImageResource(R.drawable.compass_target);
+				break;
+			case INVISIBLE:
+				compass.setVisibility(View.INVISIBLE);
+				break;
+		}
+	}
+	public void setCompassAngle(float angle){
+		compass.animate().rotation((float)(-angle)).setDuration((long) (10.0*(long) Math.abs((-compass.getRotation()-angle)))).setInterpolator(new SmoothInterpolator());
+		compass.setX(compassBaseX);
+		compass.setY(compassBaseY);
+	}
+	
+	 /* Used to fetch the components from XML */	 
 	public void attachComponents(){
 		backFromLineOfFireBtn = (Button) findViewById(R.id.btn_back_from_line_of_fire);
 		backFromSettingsBtn = (Button) findViewById(R.id.btn_back_from_settings);
@@ -457,6 +545,9 @@ public class MainUI extends Activity implements OnTouchListener {
 		prioritySelector = (Button) findViewById(R.id.priority_selector);
 		sendMessage = (Button) findViewById(R.id.btn_send_message);
 		messageTextBox = (EditText) findViewById(R.id.message_text_box);
+		compass = (ImageView) findViewById(R.id.compass_iv);
+		sosSliderBase = (ImageView) findViewById(R.id.sos_slider_iv);
+		sosHandle = (ImageView) findViewById(R.id.sos_slider_handle_iv);
 			prepareActionDial();
 	}
 	
@@ -487,7 +578,89 @@ public class MainUI extends Activity implements OnTouchListener {
 		    }
 		});
 		
-		actionDial.setOnTouchListener(this);
+		actionDial.setOnTouchListener(
+	       		new RelativeLayout.OnTouchListener() {
+					public boolean onTouch(View v, MotionEvent event) {
+						switch (event.getAction()){
+							case MotionEvent.ACTION_DOWN:
+								actioDialCurrentState=actioDialStateEnum.START;
+								x=event.getRawX();
+								y=event.getRawY();
+								setCompassMode(compassState.DIAL_ON);
+								break;
+							case MotionEvent.ACTION_MOVE:
+								if(actioDialCurrentState==actioDialStateEnum.MOVING){
+									x=event.getRawX();// - ( actionDial.getWidth() / 2 );
+									y=event.getRawY();// - ( actionDial.getHeight() * 5/4 );
+								}
+								break;
+							case MotionEvent.ACTION_UP:
+								actioDialCurrentState=actioDialStateEnum.RETURNING;
+								setAnimationStartConditions();
+								actionDialClean();
+								dialState=dialDisplayState.CLOSING;
+								switch (dialSelection){
+									case LINE_OF_FIRE:
+										root.toggleLineOfFireView();
+										setCompassMode(compassState.INVISIBLE);
+										break;
+									case MESSAGE:
+										root.toggleMessagesView();
+										setCompassMode(compassState.INVISIBLE);
+										break;
+									case SETTINGS:
+										root.toggleSettingsView();
+										setCompassMode(compassState.INVISIBLE);
+										break;
+									case PRE_DEFINED_MESSAGES:
+										root.togglePreDefinedMessagesView();
+										setCompassMode(compassState.INVISIBLE);
+										break;
+									case UNSELECTED:
+										setCompassMode(compassState.DIAL_OFF);
+										break;
+									default:
+										break;
+								}
+								updateSideButtonsPositionAndVisibility();
+								break;
+						}
+						dialAnimationHandler.postDelayed(dialAnimationRunnable, dialAnimationPollingInterval);
+						return true;
+					}
+	       		}
+	    );
+		sosHandle.setOnTouchListener(
+	       		new RelativeLayout.OnTouchListener() {
+	       			public boolean onTouch(View v, MotionEvent m) {
+	       				switch (m.getAction()){
+		       				case MotionEvent.ACTION_DOWN:
+		       					x=m.getRawX();
+		       					x=clampValue(x-sosHandle.getLayoutParams().width/2, sosHandleBaseX, sosHandleBaseX + sosSliderBase.getLayoutParams().width - sosHandle.getLayoutParams().width - (sosSliderBase.getLayoutParams().height-sosHandle.getLayoutParams().height));
+		       					sosHandle.setX(x);
+		       					sosHandle.setImageResource(R.drawable.sos_slider_handler_on);
+		       					sosSliderBase.setImageResource(R.drawable.sos_slider_on);
+		       					break;
+		       				case MotionEvent.ACTION_MOVE:
+		       						x=m.getRawX();
+		       						x=clampValue(x-sosHandle.getLayoutParams().width/2, sosHandleBaseX, sosHandleBaseX  + sosSliderBase.getLayoutParams().width - sosHandle.getLayoutParams().width - (sosSliderBase.getLayoutParams().height-sosHandle.getLayoutParams().height));
+			       					sosHandle.setX(x);
+		       					break;
+		       				case MotionEvent.ACTION_UP:
+		       					sosHandle.animate().translationX(sosHandleBaseX).setDuration(200).setInterpolator(new SmoothInterpolator());
+		       					sosHandle.setImageResource(R.drawable.sos_slider_handler_off);
+		       					sosSliderBase.setImageResource(R.drawable.sos_slider_off);
+		       					if((sosHandle.getX())==sosHandleBaseX  + sosSliderBase.getLayoutParams().width - sosHandle.getLayoutParams().width - (sosSliderBase.getLayoutParams().height-sosHandle.getLayoutParams().height)){
+		       						//launch SOS
+		       						root.postMessage("You", "< [SOS] >", FlyOutContainer.MessageItemPriority.CRITICAL, true);
+		       					}
+		       					break;
+		       			}
+		       			dialAnimationHandler.postDelayed(dialAnimationRunnable, dialAnimationPollingInterval);    				
+	       			    return true;
+	       			}
+	       		}
+	       );
 		
 		backToMainBtn.setOnClickListener(new View.OnClickListener() {
 		    @Override
@@ -514,6 +687,7 @@ public class MainUI extends Activity implements OnTouchListener {
 					break;
 				}
 		    	dialSelection=dialSelectionSate.UNSELECTED;
+		    	setCompassMode(compassState.DIAL_OFF);
 		    	updateSideButtonsPositionAndVisibility();
 		    }
 		});
@@ -741,51 +915,7 @@ public class MainUI extends Activity implements OnTouchListener {
 	    }
 	}
 	
-	@Override
-	public boolean onTouch(View v, MotionEvent event) {
-		
-		switch (event.getAction()){
-			case MotionEvent.ACTION_DOWN:
-				actioDialCurrentState=actioDialStateEnum.START;
-				x=event.getRawX();
-				y=event.getRawY();
-				break;
-			case MotionEvent.ACTION_MOVE:
-				if(actioDialCurrentState==actioDialStateEnum.MOVING){
-					x=event.getRawX();// - ( actionDial.getWidth() / 2 );
-					y=event.getRawY();// - ( actionDial.getHeight() * 5/4 );
-				}
-				break;
-			case MotionEvent.ACTION_UP:
-				actioDialCurrentState=actioDialStateEnum.RETURNING;
-				setAnimationStartConditions();
-				actionDialClean();
-				dialState=dialDisplayState.CLOSING;
-				switch (dialSelection){
-					case LINE_OF_FIRE:
-						this.root.toggleLineOfFireView();
-						break;
-					case MESSAGE:
-						this.root.toggleMessagesView();
-						break;
-					case SETTINGS:
-						this.root.toggleSettingsView();
-						break;
-					case PRE_DEFINED_MESSAGES:
-						this.root.togglePreDefinedMessagesView();
-						break;
-					case UNSELECTED:
-						
-						break;
-					default:
-						break;
-				}
-				updateSideButtonsPositionAndVisibility();
-				break;
-		}
-		dialAnimationHandler.postDelayed(dialAnimationRunnable, dialAnimationPollingInterval);
-		return true;
-	}
+	
 
 	 /* to control animation timing.. */
 	public long actionDialStartTime=0;
@@ -965,24 +1095,28 @@ public class MainUI extends Activity implements OnTouchListener {
 					pos[1]=lineOfFireIconBaseY - ( (actionDialHeight-lineOfFireIconHeight) / 2 );
 					dialSelection=dialSelectionSate.LINE_OF_FIRE;
 					actionDialPostText("Report Line of Fire", PriorityLevel.NORMAL);
+					setCompassAngle(90.0f);
 					actionDial.setImageResource(R.drawable.dial_selected);
 				} else if(assertSnapDistance( pos[0], pos[1], messagesIconBaseX, messagesIconBaseY, iconSnapRadius)){
 					pos[0]=messagesIconBaseX - ( (actionDialWidth-messagesIconWidth) / 2 );
 					pos[1]=messagesIconBaseY - ( (actionDialHeight-messagesIconHeight) / 2 );
 					dialSelection=dialSelectionSate.MESSAGE;
 					actionDialPostText("Send Message", PriorityLevel.NORMAL);
+					setCompassAngle(0.0f);
 					actionDial.setImageResource(R.drawable.dial_selected);
 				} else if(assertSnapDistance( pos[0], pos[1], settingsIconBaseX, settingsIconBaseY, iconSnapRadius)){
 					pos[0]=settingsIconBaseX - ( (actionDialWidth-settingsIconWidth) / 2 );
 					pos[1]=settingsIconBaseY - ( (actionDialHeight-settingsIconHeight) / 2 );
 					dialSelection=dialSelectionSate.SETTINGS;
 					actionDialPostText("Change Settings", PriorityLevel.NORMAL);
+					setCompassAngle(270.0f);
 					actionDial.setImageResource(R.drawable.dial_selected);
 				} else if(assertSnapDistance( pos[0], pos[1], preDefMessagesIconBaseX, preDefMessagesIconBaseY, iconSnapRadius)){
 					pos[0]=preDefMessagesIconBaseX - ( (actionDialWidth-preDefMessagesIconWidth) / 2 );
 					pos[1]=preDefMessagesIconBaseY - ( (actionDialHeight-preDefMessagesIconHeight) / 2 );
 					dialSelection=dialSelectionSate.PRE_DEFINED_MESSAGES;
 					actionDialPostText("Pre Defined Messages", PriorityLevel.NORMAL);
+					setCompassAngle(180.0f);
 					actionDial.setImageResource(R.drawable.dial_selected);
 				} else {
 					dialSelection=dialSelectionSate.UNSELECTED;
@@ -1033,5 +1167,16 @@ public class MainUI extends Activity implements OnTouchListener {
 	public void actionDialClean(){
 		dialText.setText("");
 		dialText.setVisibility(View.INVISIBLE);
+	}
+	
+	/* sos handle */
+	public float clampValue(float toBeClamped, float min, float max){
+		if(toBeClamped<=min){
+			return min;
+		} else if (toBeClamped>=max){
+			return max;
+		} else {
+			return toBeClamped;
+		}
 	}
 }
