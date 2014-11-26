@@ -1,5 +1,6 @@
 package setec.g3.ui;
 
+import java.text.DecimalFormat;
 import java.util.Calendar;
 
 import setec.g3.ui.view.viewgroup.FlyOutContainer;
@@ -12,7 +13,6 @@ import android.view.Gravity;
 import android.view.Menu;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.View.OnTouchListener;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
@@ -21,14 +21,25 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.content.Context;
 import android.widget.TextView;
+import android.hardware.Camera;
+import  android.hardware.Camera.Parameters;
+import android.media.SoundPool;
+import android.media.AudioManager;
+import android.media.SoundPool.OnLoadCompleteListener;
+import java.util.Date;
+import android.os.Vibrator;
 
 import setec.g3.ui.R;
 
+@SuppressWarnings("deprecation")
 public class MainUI extends Activity{
 
+	/* app usage control */
+	private enum userRanks{ COMMANDER, OPERATIONAL};
+		private userRanks userLevel=userRanks.COMMANDER;
+	
 	/* component handling variables */
 	private FlyOutContainer root;
-	private Button backFromLineOfFireBtn, backFromSettingsBtn, backFromPreDefinedMessageBtn;
 	
 	/* movement handling */
 	private enum actioDialStateEnum{ STILL, START, MOVING, RETURNING; }
@@ -42,6 +53,78 @@ public class MainUI extends Activity{
 	private static final int dialMovementMaxRadius = 250;
 	private static final long dialAnimationInDuration = 300;
 
+	/* screen */
+	float center[];
+	float screenWH[];
+	
+	/* quick screen */
+	private ImageView userRank;
+	private TextView timeUnderOperation;
+	private TextView heartRateValue;
+	private ImageView heartRateIcon;
+	protected Handler heartbeatAnimationHandler = new Handler();
+	protected Runnable heartbeatAnimationRunnable  = new HeartBeatAnimationRunnable();
+		private int heartRate;
+		private long heartRateDelta;
+	private enum utilityStates {UTILITY_ON, UTILITY_OFF};
+	private ImageView toggleAlarm;
+		private utilityStates alarmUtility=utilityStates.UTILITY_OFF;
+	private ImageView toggleLantern;
+		private utilityStates lanternUtility=utilityStates.UTILITY_OFF;
+		private Camera camera;
+		private Parameters p;
+		
+	/* combat mode */
+	protected Handler combatModeAnimationHandler = new Handler();
+	protected Runnable combatModeAnimationRunnable  = new CombatModeAnimationRunnable();
+	private boolean combatMode=false;
+	private ImageView combatModeCircle;
+	private long combatModeCircleAnimationStartOffset = 1000;
+	private long combatModeCircleAnimationDuration = 4000;
+	private long combatModeCircleAnimationOutDuration = 250;
+	private boolean combatModeCircleAnimationRunnableQeued=false;
+	private boolean combatModeCircleAnimationOngoing=false;
+	private ImageView combatModeOutImageBtn;
+	private ImageView combatModeCircleOut;
+	
+	/* sound playing */
+	AudioManager audioManager;
+	private SoundPool soundPool;
+    private int alarmSoundID;
+    boolean loaded = false;
+    boolean isAlarmPlaying=false;
+    private int soundCounter=0;
+    float actualVolume;
+    float maxVolume;
+    float volume;
+    
+    /* vibration */
+    private Vibrator vibrator;
+    private int buttonTapVibrationDuration=200;
+    private int buttonSOSVibrationDuration=500;
+    private int combatModeVibrationDuration=1000;
+    
+    /* time under operation */
+    private int timerUpdateDelta = 1000; // 5 seconds by default, can be changed later
+    private Handler timeUnderOperationHandler = new Handler();
+    private timeUnderOperationRunnable timerUpdater = new timeUnderOperationRunnable();
+    private Date timeUnderOperationDate;
+    private Date timeUnderOperationDateStart;
+    private enum TimerStates {STOPPED, RUNNING, RESETED};
+    	private TimerStates timerUnderOperationState=TimerStates.RESETED;
+	
+    /* distance measurement */
+    private Button btnDistanceThousandsUp, btnDistanceThousandsDown;
+    private Button btnDistanceHundredsUp, btnDistanceHundredsDown;
+    private Button btnDistanceDozensUp, btnDistanceDozensDown;
+    private Button btnDistanceUnitsUp, btnDistanceUnitsDown;
+    private TextView thousandsText, hundredsText, dozensText, unitsText;
+    private int thousands=0;
+    private int hundreds=0;
+    private int dozens=0;
+    private int units=0;
+    private Button sendDistance;
+	
 	/* action dial */
 	private ImageView actionDial;
 	private float actionDialWidth,actionDialHeight;
@@ -100,7 +183,7 @@ public class MainUI extends Activity{
 	
 	/* Compass */
 	private ImageView compass;
-	private enum compassState { DIAL_OFF, DIAL_ON, TARGET_MODE, INVISIBLE };
+	private enum compassState { DIAL_OFF, DIAL_ON, TARGET_MODE_DIAL_OFF, TARGET_MODE_DIAL_ON, INVISIBLE };
 	private compassState currentCompassState = compassState.DIAL_OFF;
 	private float compassBaseX, compassBaseY;
 	
@@ -108,6 +191,13 @@ public class MainUI extends Activity{
 	private ImageView sosSliderBase, sosHandle;
 	private float sosHandleBaseX, sosHandleBaseY;
 	private float sosSliderBaseX, sosSliderBaseY;
+	
+	 /* to control animation timing */
+	public long actionDialStartTime=0;
+	public float actionDialStartX, actionDialStartY=0;
+	public long iconsStartTime=0;
+	public enum movementInterpolation { LINEAR, OVERSHOOT, EXPONENTIAL};
+	public movementInterpolation dialInterpolation = movementInterpolation.OVERSHOOT;
 	
 	/* 
 	 * Upon creation do:
@@ -135,6 +225,16 @@ public class MainUI extends Activity{
 	public void initializeUI(){
 		attachComponents();
 		addInterfaceListeners();
+		initializeFeatures();
+		
+		resetUI();
+	}
+	
+	public void resetUI(){
+		
+		/* reseting positions */
+		actioDialCurrentState=actioDialStateEnum.RETURNING;
+		dialAnimationHandler.postDelayed(dialAnimationRunnable, dialAnimationPollingInterval); 
 	}
 	
 	@Override
@@ -162,9 +262,531 @@ public class MainUI extends Activity{
 		return widthAndHeight;
 	}
 	
+	/* Used to fetch the components from XML */	 
+	public void attachComponents(){
+		dialText = (TextView)  findViewById(R.id.main_text);
+		
+
+		actionDial = (ImageView) findViewById(R.id.action_dial_iv);
+		actionDialCircle = (ImageView) findViewById(R.id.action_dial_circle_iv);
+		lineOfFireIcon = (ImageView) findViewById(R.id.line_of_fire_iv);
+		messagesIcon = (ImageView) findViewById(R.id.messages_iv);
+		settingsIcon = (ImageView) findViewById(R.id.settings_iv);
+		preDefMessagesIcon = (ImageView) findViewById(R.id.pre_defined_messages_iv);
+		backToMainBtn = (Button) findViewById(R.id.back_selector);
+		backToLineOfFireBtn = (Button) findViewById(R.id.line_of_fire_selector);
+		backToSettingsBtn = (Button) findViewById(R.id.settings_selector);
+		backToPreDefinedMessageBtn = (Button) findViewById(R.id.pre_defined_message_selector);
+		backToMessageBtn = (Button) findViewById(R.id.message_selector);
+		prioritySelector = (Button) findViewById(R.id.priority_selector);
+		sendMessage = (Button) findViewById(R.id.btn_send_message);
+		messageTextBox = (EditText) findViewById(R.id.message_text_box);
+		compass = (ImageView) findViewById(R.id.compass_iv);
+		sosSliderBase = (ImageView) findViewById(R.id.sos_slider_iv);
+		sosHandle = (ImageView) findViewById(R.id.sos_slider_handle_iv);
+		userRank = (ImageView) findViewById(R.id.fireman_rank);
+		timeUnderOperation = (TextView)  findViewById(R.id.time_under_operation);
+		heartRateValue = (TextView)  findViewById(R.id.heart_rate);
+		heartRateIcon = (ImageView) findViewById(R.id.heart_rate_icon);
+		toggleAlarm = (ImageView) findViewById(R.id.utility_alarm);
+		toggleLantern = (ImageView) findViewById(R.id.utility_lamp);
+		combatModeCircle = (ImageView) findViewById(R.id.combat_mode_circle);
+		combatModeCircleOut = (ImageView) findViewById(R.id.combat_mode_circle_animation_out);
+		combatModeOutImageBtn = (ImageView) findViewById(R.id.combat_mode_out);
+		
+		btnDistanceThousandsUp = (Button) findViewById(R.id.thousands_up);
+		btnDistanceThousandsDown = (Button) findViewById(R.id.thousands_down);
+	    btnDistanceHundredsUp = (Button) findViewById(R.id.hundreds_up);
+	    btnDistanceHundredsDown = (Button) findViewById(R.id.hundreds_down);
+	    btnDistanceDozensUp = (Button) findViewById(R.id.dozens_up);
+	    btnDistanceDozensDown = (Button) findViewById(R.id.dozens_down);
+	    btnDistanceUnitsUp = (Button) findViewById(R.id.units_up);
+	    btnDistanceUnitsDown = (Button) findViewById(R.id.units_down);
+	    thousandsText = (TextView)  findViewById(R.id.thousands);
+	    hundredsText = (TextView)  findViewById(R.id.hundreds);
+	    dozensText = (TextView)  findViewById(R.id.dozens);
+	    unitsText = (TextView)  findViewById(R.id.units);
+	    sendDistance = (Button) findViewById(R.id.btn_send_distance);
+			prepareActionDial();
+	}
+	
+	 /* To set the components listeners. */
+	public void addInterfaceListeners(){
+		
+		actionDial.setOnTouchListener(
+	       		new RelativeLayout.OnTouchListener() {
+					public boolean onTouch(View v, MotionEvent event) {
+						switch (event.getAction()){
+							case MotionEvent.ACTION_DOWN:
+								vibrate(buttonTapVibrationDuration);
+								actioDialCurrentState=actioDialStateEnum.START;
+								x=event.getRawX();
+								y=event.getRawY();
+								setCompassMode(compassState.DIAL_ON);
+								combatModeAnimationHandler.postDelayed(combatModeAnimationRunnable, combatModeCircleAnimationStartOffset);
+								combatModeCircleAnimationRunnableQeued=true;
+								break;
+							case MotionEvent.ACTION_MOVE:
+								if(actioDialCurrentState==actioDialStateEnum.MOVING){
+									x=event.getRawX();
+									y=event.getRawY();
+								}
+								break;
+							case MotionEvent.ACTION_UP:
+								actioDialCurrentState=actioDialStateEnum.RETURNING;
+								setAnimationStartConditions();
+								actionDialClean();
+								dialState=dialDisplayState.CLOSING;
+								switch (dialSelection){
+									case LINE_OF_FIRE:
+										root.toggleLineOfFireView();
+										vibrate(buttonTapVibrationDuration);
+										setCompassMode(compassState.INVISIBLE);
+										break;
+									case MESSAGE:
+										root.toggleMessagesView();
+										vibrate(buttonTapVibrationDuration);
+										setCompassMode(compassState.INVISIBLE);
+										break;
+									case SETTINGS:
+										root.toggleSettingsView();
+										vibrate(buttonTapVibrationDuration);
+										setCompassMode(compassState.INVISIBLE);
+										break;
+									case PRE_DEFINED_MESSAGES:
+										root.togglePreDefinedMessagesView();
+										vibrate(buttonTapVibrationDuration);
+										setCompassMode(compassState.INVISIBLE);
+										break;
+									case UNSELECTED:
+										setCompassMode(compassState.DIAL_OFF);
+										break;
+									default:
+										break;
+								}
+								updateSideButtonsPositionAndVisibility();
+								disableCombatModeAnimation();
+								
+								break;
+						}
+						dialAnimationHandler.postDelayed(dialAnimationRunnable, dialAnimationPollingInterval);
+						return true;
+					}
+	       		}
+	    );
+		sosHandle.setOnTouchListener(
+	       		new RelativeLayout.OnTouchListener() {
+	       			public boolean onTouch(View v, MotionEvent m) {
+	       				switch (m.getAction()){
+		       				case MotionEvent.ACTION_DOWN:
+								vibrate(buttonTapVibrationDuration);
+		       					x=m.getRawX();
+		       					x=clampValue(x-sosHandle.getLayoutParams().width/2, sosHandleBaseX, sosHandleBaseX + sosSliderBase.getLayoutParams().width - sosHandle.getLayoutParams().width - (sosSliderBase.getLayoutParams().height-sosHandle.getLayoutParams().height));
+		       					sosHandle.setX(x);
+		       					sosHandle.setImageResource(R.drawable.sos_slider_handler_on);
+		       					sosSliderBase.setImageResource(R.drawable.sos_slider_on);
+		       					break;
+		       				case MotionEvent.ACTION_MOVE:
+		       						x=m.getRawX();
+		       						x=clampValue(x-sosHandle.getLayoutParams().width/2, sosHandleBaseX, sosHandleBaseX  + sosSliderBase.getLayoutParams().width - sosHandle.getLayoutParams().width - (sosSliderBase.getLayoutParams().height-sosHandle.getLayoutParams().height));
+			       					sosHandle.setX(x);
+		       					break;
+		       				case MotionEvent.ACTION_UP:
+		       					sosHandle.animate().translationX(sosHandleBaseX).setDuration(200).setInterpolator(new SmoothInterpolator());
+		       					sosHandle.setImageResource(R.drawable.sos_slider_handler_off);
+		       					sosSliderBase.setImageResource(R.drawable.sos_slider_off);
+		       					if((sosHandle.getX())==sosHandleBaseX  + sosSliderBase.getLayoutParams().width - sosHandle.getLayoutParams().width - (sosSliderBase.getLayoutParams().height-sosHandle.getLayoutParams().height)){
+		       						//launch SOS
+		       						root.postMessage("You", "< [SOS] >", FlyOutContainer.MessageItemPriority.CRITICAL, true);
+		       						vibrate(buttonSOSVibrationDuration);
+		       					}
+		       					break;
+		       			}
+		       			dialAnimationHandler.postDelayed(dialAnimationRunnable, dialAnimationPollingInterval);    				
+	       			    return true;
+	       			}
+	       		}
+	       );
+		
+		backToMainBtn.setOnClickListener(new View.OnClickListener() {
+		    @Override
+		    public void onClick(View v) {
+				vibrate(buttonTapVibrationDuration);
+		    	switch (dialSelection){
+				case LINE_OF_FIRE:
+					toggleLineOfFireView(v);
+					break;
+				case MESSAGE:
+					toggleMessageView(v);
+					hideKeyboard();
+					break;
+				case SETTINGS:
+					toggleSettingsView(v);
+					break;
+				case PRE_DEFINED_MESSAGES:
+					togglePreDefinedMessageView(v);
+					break;
+				case UNSELECTED:
+					// not supposed to happen
+					break;
+				default:
+					// say what?
+					break;
+				}
+		    	dialSelection=dialSelectionSate.UNSELECTED;
+		    	setCompassMode(compassState.DIAL_OFF);
+		    	updateSideButtonsPositionAndVisibility();
+		    }
+		});
+		backToLineOfFireBtn.setOnClickListener(new View.OnClickListener() {
+		    @Override
+		    public void onClick(View v) {
+				vibrate(buttonTapVibrationDuration);
+		    	switch (dialSelection){
+				case LINE_OF_FIRE:
+					// not supposed to happen
+					break;
+				case MESSAGE:
+					toggleMessageView(v);
+					dialSelection=dialSelectionSate.UNSELECTED;
+			    	updateSideButtonsPositionAndVisibility();
+					hideKeyboard();
+					break;
+				case SETTINGS:
+					toggleSettingsView(v);
+					dialSelection=dialSelectionSate.UNSELECTED;
+			    	updateSideButtonsPositionAndVisibility();
+					break;
+				case PRE_DEFINED_MESSAGES:
+					togglePreDefinedMessageView(v);
+					dialSelection=dialSelectionSate.UNSELECTED;
+			    	updateSideButtonsPositionAndVisibility();
+					break;
+				case UNSELECTED:
+					// not supposed to happen
+					break;
+				default:
+					// say what?
+					break;
+				}
+		    	toggleLineOfFireView(v);
+				dialSelection=dialSelectionSate.LINE_OF_FIRE;
+		    	updateSideButtonsPositionAndVisibility();
+		    }
+		});
+		backToSettingsBtn.setOnClickListener(new View.OnClickListener() {
+		    @Override
+		    public void onClick(View v) {
+				vibrate(buttonTapVibrationDuration);
+		    	switch (dialSelection){
+				case LINE_OF_FIRE:
+					toggleLineOfFireView(v);
+					dialSelection=dialSelectionSate.UNSELECTED;
+			    	updateSideButtonsPositionAndVisibility();
+					break;
+				case MESSAGE:
+					toggleMessageView(v);
+					dialSelection=dialSelectionSate.UNSELECTED;
+			    	updateSideButtonsPositionAndVisibility();
+					hideKeyboard();
+					break;
+				case SETTINGS:
+					// not supposed to happen
+					break;
+				case PRE_DEFINED_MESSAGES:
+					togglePreDefinedMessageView(v);
+					dialSelection=dialSelectionSate.UNSELECTED;
+			    	updateSideButtonsPositionAndVisibility();
+					break;
+				case UNSELECTED:
+					// not supposed to happen
+					break;
+				default:
+					// say what?
+					break;
+				}
+		    	toggleSettingsView(v);
+				dialSelection=dialSelectionSate.SETTINGS;
+		    	updateSideButtonsPositionAndVisibility();
+		    }
+		});
+		backToPreDefinedMessageBtn.setOnClickListener(new View.OnClickListener() {
+		    @Override
+		    public void onClick(View v) {
+				vibrate(buttonTapVibrationDuration);
+		    	switch (dialSelection){
+				case LINE_OF_FIRE:
+					toggleLineOfFireView(v);
+					dialSelection=dialSelectionSate.UNSELECTED;
+			    	updateSideButtonsPositionAndVisibility();
+					break;
+				case MESSAGE:
+					toggleMessageView(v);
+					dialSelection=dialSelectionSate.UNSELECTED;
+			    	updateSideButtonsPositionAndVisibility();
+					hideKeyboard();
+					break;
+				case SETTINGS:
+					toggleSettingsView(v);
+					dialSelection=dialSelectionSate.UNSELECTED;
+			    	updateSideButtonsPositionAndVisibility();
+					break;
+				case PRE_DEFINED_MESSAGES:
+					// not supposed to happen
+					break;
+				case UNSELECTED:
+					// not supposed to happen
+					break;
+				default:
+					// say what?
+					break;
+				}
+		    	togglePreDefinedMessageView(v);
+				dialSelection=dialSelectionSate.PRE_DEFINED_MESSAGES;
+		    	updateSideButtonsPositionAndVisibility();
+		    }
+		});
+		backToMessageBtn.setOnClickListener(new View.OnClickListener() {
+		    @Override
+		    public void onClick(View v) {
+				vibrate(buttonTapVibrationDuration);
+		    	switch (dialSelection){
+				case LINE_OF_FIRE:
+					toggleLineOfFireView(v);
+					dialSelection=dialSelectionSate.UNSELECTED;
+			    	updateSideButtonsPositionAndVisibility();
+					break;
+				case MESSAGE:
+					// not supposed to happen
+					break;
+				case SETTINGS:
+					toggleSettingsView(v);
+					dialSelection=dialSelectionSate.UNSELECTED;
+			    	updateSideButtonsPositionAndVisibility();
+					break;
+				case PRE_DEFINED_MESSAGES:
+					togglePreDefinedMessageView(v);
+					dialSelection=dialSelectionSate.UNSELECTED;
+			    	updateSideButtonsPositionAndVisibility();
+					break;
+				case UNSELECTED:
+					// not supposed to happen
+					break;
+				default:
+					// say what?
+					break;
+				}
+		    	toggleMessageView(v);
+				dialSelection=dialSelectionSate.MESSAGE;
+		    	updateSideButtonsPositionAndVisibility();
+		    }
+		});
+		
+		prioritySelector.setOnClickListener(new View.OnClickListener() {
+		    @Override
+		    public void onClick(View v) {
+				vibrate(buttonTapVibrationDuration);
+		    	switch(currentPriorityLevel){
+		    		case NORMAL:
+		    			prioritySelector.setBackgroundResource(R.drawable.selector_priority_normal_plus);
+				    	currentPriorityLevel=PriorityLevel.NORMAL_PLUS;
+		    			break;
+		    		case NORMAL_PLUS:
+		    			prioritySelector.setBackgroundResource(R.drawable.selector_priority_important);
+				    	currentPriorityLevel=PriorityLevel.IMPORTANT;
+		    			break;
+		    		case IMPORTANT:
+		    			prioritySelector.setBackgroundResource(R.drawable.selector_priority_critical);
+				    	currentPriorityLevel=PriorityLevel.CRITICAL;
+		    			break;
+					case CRITICAL:
+						prioritySelector.setBackgroundResource(R.drawable.selector_priority_normal);
+				    	currentPriorityLevel=PriorityLevel.NORMAL;
+						break;
+					default:
+						// inexistent case 
+						break;
+		    	}
+		    }
+		});
+		sendMessage.setOnClickListener(new View.OnClickListener() {
+		    @Override
+		    public void onClick(View v) {
+				vibrate(buttonTapVibrationDuration);
+			    if(messageTextBox.getText().toString().trim().length()>0){
+			    	String msg = messageTextBox.getText().toString().trim();
+				    messageTextBox.setText("");
+				    sendMessage(msg);
+			    }
+		    }
+		});
+		
+		toggleAlarm.setOnClickListener(new View.OnClickListener() {
+		    @Override
+		    public void onClick(View v) {
+				vibrate(buttonTapVibrationDuration);
+			    if(alarmUtility==utilityStates.UTILITY_OFF){
+			    	alarmUtility=utilityStates.UTILITY_ON;
+			    	toggleAlarm.setImageResource(R.drawable.utility_alarm_on);
+			    	playAlarm();
+			    } else {
+			    	alarmUtility=utilityStates.UTILITY_OFF;
+			    	toggleAlarm.setImageResource(R.drawable.utility_alarm_off);
+			    	stopAlarm();
+			    }
+		    }
+		});
+		toggleLantern.setOnClickListener(new View.OnClickListener() {
+		    @Override
+		    public void onClick(View v) {
+				vibrate(buttonTapVibrationDuration);
+			    if(lanternUtility==utilityStates.UTILITY_OFF){
+			    	lanternUtility=utilityStates.UTILITY_ON;
+			    	toggleLantern.setImageResource(R.drawable.utility_lamp_on);
+			         p.setFlashMode(Parameters.FLASH_MODE_TORCH);
+			         camera.setParameters(p);
+			         camera.startPreview();
+			    } else {
+			    	lanternUtility=utilityStates.UTILITY_OFF;
+			    	toggleLantern.setImageResource(R.drawable.utility_lamp_off);
+			    	p.setFlashMode(Parameters.FLASH_MODE_OFF);
+			    	camera.setParameters(p);
+			    	camera.stopPreview();
+			    }
+		    }
+		});
+		
+		timeUnderOperation.setOnClickListener(new View.OnClickListener() {
+		    @Override
+		    public void onClick(View v) {
+				vibrate(buttonTapVibrationDuration);
+		    	toggleUnderOperationTimer();
+		    }
+		});
+		
+		btnDistanceThousandsUp.setOnClickListener(new View.OnClickListener() {
+		    @Override
+		    public void onClick(View v) {
+				vibrate(buttonTapVibrationDuration);
+				thousands=thousands+1;
+				thousandsText.setText(Integer.toString(thousands));
+		    }
+		});
+		btnDistanceThousandsDown.setOnClickListener(new View.OnClickListener() {
+		    @Override
+		    public void onClick(View v) {
+		    	if(thousands>0){
+					vibrate(buttonTapVibrationDuration);
+		    		thousands=thousands-1;
+					thousandsText.setText(Integer.toString(thousands));
+		    	}
+		    }
+		});
+	    btnDistanceHundredsUp.setOnClickListener(new View.OnClickListener() {
+		    @Override
+		    public void onClick(View v) {
+				vibrate(buttonTapVibrationDuration);
+				hundreds=hundreds+1;
+				hundredsText.setText(Integer.toString(hundreds));
+		    }
+		});
+	    btnDistanceHundredsDown.setOnClickListener(new View.OnClickListener() {
+		    @Override
+		    public void onClick(View v) {
+		    	if(hundreds>0){
+					vibrate(buttonTapVibrationDuration);
+		    		hundreds=hundreds-1;
+		    		hundredsText.setText(Integer.toString(hundreds));
+		    	}
+		    }
+		});
+	    btnDistanceDozensUp.setOnClickListener(new View.OnClickListener() {
+		    @Override
+		    public void onClick(View v) {
+				vibrate(buttonTapVibrationDuration);
+				dozens=dozens+1;
+				dozensText.setText(Integer.toString(dozens));
+		    }
+		});
+	    btnDistanceDozensDown.setOnClickListener(new View.OnClickListener() {
+		    @Override
+		    public void onClick(View v) {
+		    	if(dozens>0){
+					vibrate(buttonTapVibrationDuration);
+		    		dozens=dozens-1;
+		    		dozensText.setText(Integer.toString(dozens));
+		    	}
+		    }
+		});
+	    btnDistanceUnitsUp.setOnClickListener(new View.OnClickListener() {
+		    @Override
+		    public void onClick(View v) {
+				vibrate(buttonTapVibrationDuration);
+				units=units+1;
+				unitsText.setText(Integer.toString(units));
+		    }
+		});
+	    btnDistanceUnitsDown.setOnClickListener(new View.OnClickListener() {
+		    @Override
+		    public void onClick(View v) {
+		    	if(units>0){
+					vibrate(buttonTapVibrationDuration);
+		    		units=units-1;
+		    		unitsText.setText(Integer.toString(units));
+		    	}
+		    }
+		});
+	    sendDistance.setOnClickListener(new View.OnClickListener() {
+		    @Override
+		    public void onClick(View v) {
+				vibrate(buttonTapVibrationDuration);
+		    	int distanceValue = Integer.parseInt(thousandsText.getText().toString())*(int)1000 +  Integer.parseInt(hundredsText.getText().toString())*(int)100 + Integer.parseInt(dozensText.getText().toString())*(int)10 + Integer.parseInt(unitsText.getText().toString());
+		    	sendDistance(distanceValue);
+		    }
+		});
+	    
+	    combatModeOutImageBtn.setOnTouchListener(
+	       		new RelativeLayout.OnTouchListener() {
+					public boolean onTouch(View v, MotionEvent event) {
+						switch (event.getAction()){
+							case MotionEvent.ACTION_DOWN:
+								vibrate(buttonTapVibrationDuration);
+								combatModeAnimationHandler.postDelayed(combatModeAnimationRunnable, combatModeCircleAnimationStartOffset);
+								combatModeCircleAnimationRunnableQeued=true;
+								break;
+							case MotionEvent.ACTION_MOVE:
+								break;
+							case MotionEvent.ACTION_UP:
+								disableCombatModeAnimation();
+								break;
+						}
+						return true;
+					}
+	       		}
+	    );
+	}
+	
+	public void playAlarm(){
+		if (loaded && !isAlarmPlaying) {
+    		soundPool.play(alarmSoundID, volume, volume, 1, -1, 1f);
+    		soundCounter = soundCounter++;
+    		isAlarmPlaying = true;
+    	 }
+	}
+	public void stopAlarm(){
+		if (isAlarmPlaying) {
+    		soundPool.pause(alarmSoundID);
+    		alarmSoundID = soundPool.load(this, R.raw.alarm, soundCounter);
+    		isAlarmPlaying = false;
+    	}
+	}
+	public void sendDistance(int d){
+		sendMessage(new StringBuilder("Distance to line of fire: ").append(d).append("m").toString());
+	}
+	
 	public void prepareActionDial(){
-		float center[]=getCenterOfScreen();
-		float screenWH[]=getScreenSize();
+		center=getCenterOfScreen();
+		screenWH=getScreenSize();
 		distanceFromCenter=250;
 		iconSnapRadius=100;
 		
@@ -183,7 +805,6 @@ public class MainUI extends Activity{
 		actionDialBaseY = center[1] - actionDialHeight/2.0f;
 		x=actionDialBaseX;
 		y=actionDialBaseY;
-		actioDialCurrentState=actioDialStateEnum.RETURNING;
 		
 		/* dial base */
 		RelativeLayout.LayoutParams paramsDialer = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
@@ -292,8 +913,8 @@ public class MainUI extends Activity{
 		
 		/* compass */
 		RelativeLayout.LayoutParams paramsCompass = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
-		paramsCompass.height = 400;
-		paramsCompass.width = 400;
+		paramsCompass.height = 550;
+		paramsCompass.width = 550;
 		compass.setLayoutParams(paramsCompass);
 		compass.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
 		compassBaseX=center[0] - (paramsCompass.width/2);
@@ -307,7 +928,7 @@ public class MainUI extends Activity{
 		sosSliderBase.setLayoutParams(sliderBase);
 		sosSliderBase.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
 		sosSliderBaseX=center[0] - (sliderBase.width/2);
-		sosSliderBaseY=center[1] + (paramsDialer.height/2) + paramsDialerIcons.height;
+		sosSliderBaseY=center[1]*2 - sliderBase.height*2f;
 		sosHandle.setLayoutParams(paramsDialerIcons);
 		sosHandleBaseX=sosSliderBaseX + (sliderBase.height-paramsDialerIcons.height)/2;
 		sosHandleBaseY=sosSliderBaseY + (sliderBase.height-paramsDialerIcons.height)/2;
@@ -317,6 +938,16 @@ public class MainUI extends Activity{
 		sosHandle.setX(sosHandleBaseX);
 		sosHandle.setY(sosHandleBaseY);
 		sosHandle.setImageResource(R.drawable.sos_slider_handler_off);
+		
+		/* quick screen */
+		setHeartRate(60);
+		heartbeatAnimationHandler.postDelayed(heartbeatAnimationRunnable, heartRateDelta);
+		
+		/* combat mode circle */
+		combatModeCircle.setLayoutParams(paramsDialer);
+		combatModeCircle.setImageResource(R.drawable.combat_mode_circle);
+		combatModeCircle.setScaleType(ImageView.ScaleType.FIT_CENTER);
+		combatModeCircle.setVisibility(View.INVISIBLE);
 
 		/* ordering on the z axis */
 		actionDial.bringToFront();
@@ -325,7 +956,34 @@ public class MainUI extends Activity{
 		settingsIcon.bringToFront();
 		preDefMessagesIcon.bringToFront();	
 		dialText.bringToFront();
+
 	}
+	
+	public void initializeFeatures(){
+		/* camera access for LED usage */
+		camera = Camera.open(); 
+        p = camera.getParameters(); 
+        
+        /* sound playing */
+        this.setVolumeControlStream(AudioManager.STREAM_MUSIC);
+        soundPool = new SoundPool(10, AudioManager.STREAM_MUSIC, 0);
+        soundPool.setOnLoadCompleteListener(new OnLoadCompleteListener() {
+          @Override
+          public void onLoadComplete(SoundPool soundPool, int sampleId,
+              int status) {
+            loaded = true;
+          }
+        });
+        alarmSoundID = soundPool.load(this, R.raw.alarm, 1);
+        audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+        actualVolume = (float) audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+        maxVolume = (float) audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+        volume = actualVolume / maxVolume;
+        
+        /* vibration */
+        vibrator = (Vibrator) this.getSystemService(Context.VIBRATOR_SERVICE);
+	}
+	
 	
 	public void resetActionDialPosition(){
 		actionDial.setX( actionDialBaseX );
@@ -508,9 +1166,13 @@ public class MainUI extends Activity{
 				compass.setVisibility(View.VISIBLE);
 				compass.setImageResource(R.drawable.compass_on);
 				break;
-			case TARGET_MODE:
+			case TARGET_MODE_DIAL_OFF:
 				compass.setVisibility(View.VISIBLE);
-				compass.setImageResource(R.drawable.compass_target);
+				compass.setImageResource(R.drawable.compass_target_off);
+				break;
+			case TARGET_MODE_DIAL_ON:
+				compass.setVisibility(View.VISIBLE);
+				compass.setImageResource(R.drawable.compass_target_on);
 				break;
 			case INVISIBLE:
 				compass.setVisibility(View.INVISIBLE);
@@ -523,351 +1185,7 @@ public class MainUI extends Activity{
 		compass.setY(compassBaseY);
 	}
 	
-	 /* Used to fetch the components from XML */	 
-	public void attachComponents(){
-		backFromLineOfFireBtn = (Button) findViewById(R.id.btn_back_from_line_of_fire);
-		backFromSettingsBtn = (Button) findViewById(R.id.btn_back_from_settings);
-		backFromPreDefinedMessageBtn = (Button) findViewById(R.id.btn_back_from_pre_defined_messages);
-		dialText = (TextView)  findViewById(R.id.main_text);
-		
-
-		actionDial = (ImageView) findViewById(R.id.action_dial_iv);
-		actionDialCircle = (ImageView) findViewById(R.id.action_dial_circle_iv);
-		lineOfFireIcon = (ImageView) findViewById(R.id.line_of_fire_iv);
-		messagesIcon = (ImageView) findViewById(R.id.messages_iv);
-		settingsIcon = (ImageView) findViewById(R.id.settings_iv);
-		preDefMessagesIcon = (ImageView) findViewById(R.id.pre_defined_messages_iv);
-		backToMainBtn = (Button) findViewById(R.id.back_selector);
-		backToLineOfFireBtn = (Button) findViewById(R.id.line_of_fire_selector);
-		backToSettingsBtn = (Button) findViewById(R.id.settings_selector);
-		backToPreDefinedMessageBtn = (Button) findViewById(R.id.pre_defined_message_selector);
-		backToMessageBtn = (Button) findViewById(R.id.message_selector);
-		prioritySelector = (Button) findViewById(R.id.priority_selector);
-		sendMessage = (Button) findViewById(R.id.btn_send_message);
-		messageTextBox = (EditText) findViewById(R.id.message_text_box);
-		compass = (ImageView) findViewById(R.id.compass_iv);
-		sosSliderBase = (ImageView) findViewById(R.id.sos_slider_iv);
-		sosHandle = (ImageView) findViewById(R.id.sos_slider_handle_iv);
-			prepareActionDial();
-	}
-	
-	 /* To set the components listeners. */
-	public void addInterfaceListeners(){
-		backFromLineOfFireBtn.setOnClickListener(new View.OnClickListener() {
-		    @Override
-		    public void onClick(View v) {
-		    	toggleLineOfFireView(v);
-		    	dialSelection=dialSelectionSate.UNSELECTED;
-		    	updateSideButtonsPositionAndVisibility();
-		    }
-		});
-		backFromSettingsBtn.setOnClickListener(new View.OnClickListener() {
-		    @Override
-		    public void onClick(View v) {
-		    	toggleSettingsView(v);
-		    	dialSelection=dialSelectionSate.UNSELECTED;
-		    	updateSideButtonsPositionAndVisibility();
-		    }
-		});
-		backFromPreDefinedMessageBtn.setOnClickListener(new View.OnClickListener() {
-		    @Override
-		    public void onClick(View v) {
-		    	togglePreDefinedMessageView(v);
-		    	dialSelection=dialSelectionSate.UNSELECTED;
-		    	updateSideButtonsPositionAndVisibility();
-		    }
-		});
-		
-		actionDial.setOnTouchListener(
-	       		new RelativeLayout.OnTouchListener() {
-					public boolean onTouch(View v, MotionEvent event) {
-						switch (event.getAction()){
-							case MotionEvent.ACTION_DOWN:
-								actioDialCurrentState=actioDialStateEnum.START;
-								x=event.getRawX();
-								y=event.getRawY();
-								setCompassMode(compassState.DIAL_ON);
-								break;
-							case MotionEvent.ACTION_MOVE:
-								if(actioDialCurrentState==actioDialStateEnum.MOVING){
-									x=event.getRawX();// - ( actionDial.getWidth() / 2 );
-									y=event.getRawY();// - ( actionDial.getHeight() * 5/4 );
-								}
-								break;
-							case MotionEvent.ACTION_UP:
-								actioDialCurrentState=actioDialStateEnum.RETURNING;
-								setAnimationStartConditions();
-								actionDialClean();
-								dialState=dialDisplayState.CLOSING;
-								switch (dialSelection){
-									case LINE_OF_FIRE:
-										root.toggleLineOfFireView();
-										setCompassMode(compassState.INVISIBLE);
-										break;
-									case MESSAGE:
-										root.toggleMessagesView();
-										setCompassMode(compassState.INVISIBLE);
-										break;
-									case SETTINGS:
-										root.toggleSettingsView();
-										setCompassMode(compassState.INVISIBLE);
-										break;
-									case PRE_DEFINED_MESSAGES:
-										root.togglePreDefinedMessagesView();
-										setCompassMode(compassState.INVISIBLE);
-										break;
-									case UNSELECTED:
-										setCompassMode(compassState.DIAL_OFF);
-										break;
-									default:
-										break;
-								}
-								updateSideButtonsPositionAndVisibility();
-								break;
-						}
-						dialAnimationHandler.postDelayed(dialAnimationRunnable, dialAnimationPollingInterval);
-						return true;
-					}
-	       		}
-	    );
-		sosHandle.setOnTouchListener(
-	       		new RelativeLayout.OnTouchListener() {
-	       			public boolean onTouch(View v, MotionEvent m) {
-	       				switch (m.getAction()){
-		       				case MotionEvent.ACTION_DOWN:
-		       					x=m.getRawX();
-		       					x=clampValue(x-sosHandle.getLayoutParams().width/2, sosHandleBaseX, sosHandleBaseX + sosSliderBase.getLayoutParams().width - sosHandle.getLayoutParams().width - (sosSliderBase.getLayoutParams().height-sosHandle.getLayoutParams().height));
-		       					sosHandle.setX(x);
-		       					sosHandle.setImageResource(R.drawable.sos_slider_handler_on);
-		       					sosSliderBase.setImageResource(R.drawable.sos_slider_on);
-		       					break;
-		       				case MotionEvent.ACTION_MOVE:
-		       						x=m.getRawX();
-		       						x=clampValue(x-sosHandle.getLayoutParams().width/2, sosHandleBaseX, sosHandleBaseX  + sosSliderBase.getLayoutParams().width - sosHandle.getLayoutParams().width - (sosSliderBase.getLayoutParams().height-sosHandle.getLayoutParams().height));
-			       					sosHandle.setX(x);
-		       					break;
-		       				case MotionEvent.ACTION_UP:
-		       					sosHandle.animate().translationX(sosHandleBaseX).setDuration(200).setInterpolator(new SmoothInterpolator());
-		       					sosHandle.setImageResource(R.drawable.sos_slider_handler_off);
-		       					sosSliderBase.setImageResource(R.drawable.sos_slider_off);
-		       					if((sosHandle.getX())==sosHandleBaseX  + sosSliderBase.getLayoutParams().width - sosHandle.getLayoutParams().width - (sosSliderBase.getLayoutParams().height-sosHandle.getLayoutParams().height)){
-		       						//launch SOS
-		       						root.postMessage("You", "< [SOS] >", FlyOutContainer.MessageItemPriority.CRITICAL, true);
-		       					}
-		       					break;
-		       			}
-		       			dialAnimationHandler.postDelayed(dialAnimationRunnable, dialAnimationPollingInterval);    				
-	       			    return true;
-	       			}
-	       		}
-	       );
-		
-		backToMainBtn.setOnClickListener(new View.OnClickListener() {
-		    @Override
-		    public void onClick(View v) {
-		    	switch (dialSelection){
-				case LINE_OF_FIRE:
-					toggleLineOfFireView(v);
-					break;
-				case MESSAGE:
-					toggleMessageView(v);
-					hideKeyboard();
-					break;
-				case SETTINGS:
-					toggleSettingsView(v);
-					break;
-				case PRE_DEFINED_MESSAGES:
-					togglePreDefinedMessageView(v);
-					break;
-				case UNSELECTED:
-					// not supposed to happen
-					break;
-				default:
-					// say what?
-					break;
-				}
-		    	dialSelection=dialSelectionSate.UNSELECTED;
-		    	setCompassMode(compassState.DIAL_OFF);
-		    	updateSideButtonsPositionAndVisibility();
-		    }
-		});
-		backToLineOfFireBtn.setOnClickListener(new View.OnClickListener() {
-		    @Override
-		    public void onClick(View v) {
-		    	switch (dialSelection){
-				case LINE_OF_FIRE:
-					// not supposed to happen
-					break;
-				case MESSAGE:
-					toggleMessageView(v);
-					dialSelection=dialSelectionSate.UNSELECTED;
-			    	updateSideButtonsPositionAndVisibility();
-					hideKeyboard();
-					break;
-				case SETTINGS:
-					toggleSettingsView(v);
-					dialSelection=dialSelectionSate.UNSELECTED;
-			    	updateSideButtonsPositionAndVisibility();
-					break;
-				case PRE_DEFINED_MESSAGES:
-					togglePreDefinedMessageView(v);
-					dialSelection=dialSelectionSate.UNSELECTED;
-			    	updateSideButtonsPositionAndVisibility();
-					break;
-				case UNSELECTED:
-					// not supposed to happen
-					break;
-				default:
-					// say what?
-					break;
-				}
-		    	toggleLineOfFireView(v);
-				dialSelection=dialSelectionSate.LINE_OF_FIRE;
-		    	updateSideButtonsPositionAndVisibility();
-		    }
-		});
-		backToSettingsBtn.setOnClickListener(new View.OnClickListener() {
-		    @Override
-		    public void onClick(View v) {
-		    	switch (dialSelection){
-				case LINE_OF_FIRE:
-					toggleLineOfFireView(v);
-					dialSelection=dialSelectionSate.UNSELECTED;
-			    	updateSideButtonsPositionAndVisibility();
-					break;
-				case MESSAGE:
-					toggleMessageView(v);
-					dialSelection=dialSelectionSate.UNSELECTED;
-			    	updateSideButtonsPositionAndVisibility();
-					hideKeyboard();
-					break;
-				case SETTINGS:
-					// not supposed to happen
-					break;
-				case PRE_DEFINED_MESSAGES:
-					togglePreDefinedMessageView(v);
-					dialSelection=dialSelectionSate.UNSELECTED;
-			    	updateSideButtonsPositionAndVisibility();
-					break;
-				case UNSELECTED:
-					// not supposed to happen
-					break;
-				default:
-					// say what?
-					break;
-				}
-		    	toggleSettingsView(v);
-				dialSelection=dialSelectionSate.SETTINGS;
-		    	updateSideButtonsPositionAndVisibility();
-		    }
-		});
-		backToPreDefinedMessageBtn.setOnClickListener(new View.OnClickListener() {
-		    @Override
-		    public void onClick(View v) {
-		    	switch (dialSelection){
-				case LINE_OF_FIRE:
-					toggleLineOfFireView(v);
-					dialSelection=dialSelectionSate.UNSELECTED;
-			    	updateSideButtonsPositionAndVisibility();
-					break;
-				case MESSAGE:
-					toggleMessageView(v);
-					dialSelection=dialSelectionSate.UNSELECTED;
-			    	updateSideButtonsPositionAndVisibility();
-					hideKeyboard();
-					break;
-				case SETTINGS:
-					toggleSettingsView(v);
-					dialSelection=dialSelectionSate.UNSELECTED;
-			    	updateSideButtonsPositionAndVisibility();
-					break;
-				case PRE_DEFINED_MESSAGES:
-					// not supposed to happen
-					break;
-				case UNSELECTED:
-					// not supposed to happen
-					break;
-				default:
-					// say what?
-					break;
-				}
-		    	togglePreDefinedMessageView(v);
-				dialSelection=dialSelectionSate.PRE_DEFINED_MESSAGES;
-		    	updateSideButtonsPositionAndVisibility();
-		    }
-		});
-		backToMessageBtn.setOnClickListener(new View.OnClickListener() {
-		    @Override
-		    public void onClick(View v) {
-		    	switch (dialSelection){
-				case LINE_OF_FIRE:
-					toggleLineOfFireView(v);
-					dialSelection=dialSelectionSate.UNSELECTED;
-			    	updateSideButtonsPositionAndVisibility();
-					break;
-				case MESSAGE:
-					// not supposed to happen
-					break;
-				case SETTINGS:
-					toggleSettingsView(v);
-					dialSelection=dialSelectionSate.UNSELECTED;
-			    	updateSideButtonsPositionAndVisibility();
-					break;
-				case PRE_DEFINED_MESSAGES:
-					togglePreDefinedMessageView(v);
-					dialSelection=dialSelectionSate.UNSELECTED;
-			    	updateSideButtonsPositionAndVisibility();
-					break;
-				case UNSELECTED:
-					// not supposed to happen
-					break;
-				default:
-					// say what?
-					break;
-				}
-		    	toggleMessageView(v);
-				dialSelection=dialSelectionSate.MESSAGE;
-		    	updateSideButtonsPositionAndVisibility();
-		    }
-		});
-		
-		prioritySelector.setOnClickListener(new View.OnClickListener() {
-		    @Override
-		    public void onClick(View v) {
-		    	switch(currentPriorityLevel){
-		    		case NORMAL:
-		    			prioritySelector.setBackgroundResource(R.drawable.selector_priority_normal_plus);
-				    	currentPriorityLevel=PriorityLevel.NORMAL_PLUS;
-		    			break;
-		    		case NORMAL_PLUS:
-		    			prioritySelector.setBackgroundResource(R.drawable.selector_priority_important);
-				    	currentPriorityLevel=PriorityLevel.IMPORTANT;
-		    			break;
-		    		case IMPORTANT:
-		    			prioritySelector.setBackgroundResource(R.drawable.selector_priority_critical);
-				    	currentPriorityLevel=PriorityLevel.CRITICAL;
-		    			break;
-					case CRITICAL:
-						prioritySelector.setBackgroundResource(R.drawable.selector_priority_normal);
-				    	currentPriorityLevel=PriorityLevel.NORMAL;
-						break;
-					default:
-						// inexistent case 
-						break;
-		    	}
-		    }
-		});
-		sendMessage.setOnClickListener(new View.OnClickListener() {
-		    @Override
-		    public void onClick(View v) {
-			    if(messageTextBox.getText().toString().trim().length()>0){
-			    	String msg = messageTextBox.getText().toString().trim();
-				    messageTextBox.setText("");
-				    sendMessage(msg);
-			    }
-		    }
-		});
-}
+	 
 	
 	 /* To toggle between views */
 	public void toggleLineOfFireView(View v){
@@ -917,12 +1235,7 @@ public class MainUI extends Activity{
 	
 	
 
-	 /* to control animation timing.. */
-	public long actionDialStartTime=0;
-	public float actionDialStartX, actionDialStartY=0;
-	public long iconsStartTime=0;
-	public enum movementInterpolation { LINEAR, OVERSHOOT, EXPONENTIAL};
-	public movementInterpolation dialInterpolation = movementInterpolation.OVERSHOOT;
+	
 	public void setAnimationactionDialStartTime(){
 		actionDialStartTime=Calendar.getInstance().getTimeInMillis();
 	}
@@ -1063,8 +1376,7 @@ public class MainUI extends Activity{
 				messagesIcon.animate().alpha(1.0f).setDuration(dialAnimationInDuration);
 				settingsIcon.animate().alpha(1.0f).setDuration(dialAnimationInDuration);
 				preDefMessagesIcon.animate().alpha(1.0f).setDuration(dialAnimationInDuration);
-				actionDialCircle.animate().scaleX(1.0f).setDuration(dialAnimationInDuration);
-				actionDialCircle.animate().scaleY(1.0f).setDuration(dialAnimationInDuration);
+				actionDialCircle.animate().scaleX(1.0f).scaleY(1.0f).setDuration(dialAnimationInDuration);
 				actionDialCircle.animate().alpha(1.0f).setDuration(dialAnimationInDuration);
 				
 				/* action dial circle position and visibility */
@@ -1089,7 +1401,7 @@ public class MainUI extends Activity{
 				actioDialCurrentState=actioDialStateEnum.MOVING;
 				dialState=dialDisplayState.OPENING;
 			} else if ( actioDialCurrentState==actioDialStateEnum.MOVING ){
-				float pos[]=trimRadialMovement((x - actionDialWidth/2.0f), (y - actionDialHeight * 3/2f), actionDialBaseX, actionDialBaseY, (float)dialMovementMaxRadius);
+				float pos[]=trimRadialMovement((x - actionDialWidth/2.0f), (y - actionDialHeight/*/2.0f*/), actionDialBaseX, actionDialBaseY, (float)dialMovementMaxRadius);
 				if(assertSnapDistance( pos[0], pos[1], lineOfFireIconBaseX, lineOfFireIconBaseY, iconSnapRadius)){
 					pos[0]=lineOfFireIconBaseX - ( (actionDialWidth-lineOfFireIconWidth) / 2 );
 					pos[1]=lineOfFireIconBaseY - ( (actionDialHeight-lineOfFireIconHeight) / 2 );
@@ -1097,6 +1409,7 @@ public class MainUI extends Activity{
 					actionDialPostText("Report Line of Fire", PriorityLevel.NORMAL);
 					setCompassAngle(90.0f);
 					actionDial.setImageResource(R.drawable.dial_selected);
+					disableCombatModeAnimation();
 				} else if(assertSnapDistance( pos[0], pos[1], messagesIconBaseX, messagesIconBaseY, iconSnapRadius)){
 					pos[0]=messagesIconBaseX - ( (actionDialWidth-messagesIconWidth) / 2 );
 					pos[1]=messagesIconBaseY - ( (actionDialHeight-messagesIconHeight) / 2 );
@@ -1104,6 +1417,7 @@ public class MainUI extends Activity{
 					actionDialPostText("Send Message", PriorityLevel.NORMAL);
 					setCompassAngle(0.0f);
 					actionDial.setImageResource(R.drawable.dial_selected);
+					disableCombatModeAnimation();
 				} else if(assertSnapDistance( pos[0], pos[1], settingsIconBaseX, settingsIconBaseY, iconSnapRadius)){
 					pos[0]=settingsIconBaseX - ( (actionDialWidth-settingsIconWidth) / 2 );
 					pos[1]=settingsIconBaseY - ( (actionDialHeight-settingsIconHeight) / 2 );
@@ -1111,6 +1425,7 @@ public class MainUI extends Activity{
 					actionDialPostText("Change Settings", PriorityLevel.NORMAL);
 					setCompassAngle(270.0f);
 					actionDial.setImageResource(R.drawable.dial_selected);
+					disableCombatModeAnimation();
 				} else if(assertSnapDistance( pos[0], pos[1], preDefMessagesIconBaseX, preDefMessagesIconBaseY, iconSnapRadius)){
 					pos[0]=preDefMessagesIconBaseX - ( (actionDialWidth-preDefMessagesIconWidth) / 2 );
 					pos[1]=preDefMessagesIconBaseY - ( (actionDialHeight-preDefMessagesIconHeight) / 2 );
@@ -1118,6 +1433,7 @@ public class MainUI extends Activity{
 					actionDialPostText("Pre Defined Messages", PriorityLevel.NORMAL);
 					setCompassAngle(180.0f);
 					actionDial.setImageResource(R.drawable.dial_selected);
+					disableCombatModeAnimation();
 				} else {
 					dialSelection=dialSelectionSate.UNSELECTED;
 					actionDialPostText("", PriorityLevel.NORMAL);
@@ -1179,4 +1495,137 @@ public class MainUI extends Activity{
 			return toBeClamped;
 		}
 	}
+	
+	public void setHeartRate(int newHR){
+		this.heartRate=newHR;
+		heartRateValue.setText(Integer.toString(heartRate));
+		heartRateDelta=(long)60000.0 / (long)heartRate;
+	}
+	
+	/* To control the heartbeat */
+	protected class HeartBeatAnimationRunnable implements Runnable {		
+				
+		@Override
+		public void run() {
+			heartRateIcon.setAlpha(1.0f);
+			heartRateIcon.animate().alpha(0.0f).setDuration(heartRateDelta);
+			heartbeatAnimationHandler.postDelayed(this, heartRateDelta);
+		}
+	}
+	
+	/* To control the combat mode circle toggle animation */
+	protected class CombatModeAnimationRunnable implements Runnable {		
+		
+		private boolean concludeAnimation=false;
+		
+		@Override
+		public void run() {
+			if(combatMode==false){
+				if(combatModeCircleAnimationOngoing==true) {
+					vibrate(combatModeVibrationDuration);
+					combatModeCircle.animate().alpha(0.0f).setDuration(combatModeCircleAnimationOutDuration);
+					combatModeCircle.animate().scaleX(1.3f).scaleY(1.3f).setDuration(combatModeCircleAnimationOutDuration);
+					combatModeCircleAnimationOngoing=false;
+					combatMode=true;
+					root.toggleCombatModeView();
+				} else {
+					combatModeCircle.setX(center[0] - combatModeCircle.getLayoutParams().width/2.0f);
+					combatModeCircle.setY(center[1] - combatModeCircle.getLayoutParams().height/2.0f);
+					combatModeCircle.setVisibility(View.VISIBLE);
+					combatModeCircle.setScaleX(0.0f);
+					combatModeCircle.setScaleY(0.0f);
+					combatModeCircle.setAlpha(1.0f);
+					combatModeCircle.animate().scaleX(1.0f).scaleY(1.0f).setDuration(combatModeCircleAnimationDuration);
+					combatModeCircleAnimationOngoing=true;
+					combatModeAnimationHandler.postDelayed(this, combatModeCircleAnimationDuration);
+				}
+			} else {
+				if(combatModeCircleAnimationOngoing==true) {
+					vibrate(combatModeVibrationDuration);
+					combatModeCircleOut.animate().alpha(0.0f).setDuration(combatModeCircleAnimationOutDuration);
+					combatModeCircleOut.animate().scaleX(1.3f).scaleY(1.3f).setDuration(combatModeCircleAnimationOutDuration);
+					combatModeCircleAnimationOngoing=false;
+					combatMode=false;
+					root.toggleCombatModeView();
+				} else {
+					combatModeCircleOut.setVisibility(View.VISIBLE);
+					combatModeCircleOut.setScaleX(0.0f);
+					combatModeCircleOut.setScaleY(0.0f);
+					combatModeCircleOut.setAlpha(1.0f);
+					combatModeCircleOut.animate().scaleX(1.0f).scaleY(1.0f).setDuration(combatModeCircleAnimationDuration);
+					combatModeCircleAnimationOngoing=true;
+					combatModeAnimationHandler.postDelayed(this, combatModeCircleAnimationDuration);
+				}
+			}
+		}
+	}
+	
+	public void disableCombatModeAnimation(){
+		if (combatModeCircleAnimationRunnableQeued==true){
+			combatModeCircleAnimationRunnableQeued=false;
+			combatModeAnimationHandler.removeCallbacks(combatModeAnimationRunnable);
+		}
+		if (combatModeCircleAnimationOngoing==true){
+			combatModeCircle.animate().cancel();
+			combatModeCircle.setVisibility(View.INVISIBLE);
+			combatModeCircleAnimationOngoing=false;
+		}
+	}
+	
+	/* To control the timeUnderOperationTimer */
+	protected class timeUnderOperationRunnable implements Runnable {		
+				
+		@Override
+		public void run() {
+		    timeUnderOperationDate =  Calendar.getInstance().getTime();
+		    long different = timeUnderOperationDate.getTime() - timeUnderOperationDateStart.getTime();
+
+		    DecimalFormat formatter = new DecimalFormat("00");
+		    
+	        long secondsInMilli = 1000;
+	        long minutesInMilli = secondsInMilli * 60;
+	        long hoursInMilli = minutesInMilli * 60;
+	        long daysInMilli = hoursInMilli * 24;
+
+	        different = different % daysInMilli;
+
+	        int elapsedHours = (int)different / (int)hoursInMilli;
+	        different = different % hoursInMilli;
+	        int elapsedMinutes = (int)different / (int)minutesInMilli;
+	        different = different % minutesInMilli;
+	        int elapsedSeconds = (int)different / (int)secondsInMilli;
+
+		    timeUnderOperation.setText((new StringBuilder(formatter.format(elapsedHours)).append(":").append(formatter.format(elapsedMinutes)).append(":").append(formatter.format(elapsedSeconds)).toString()));
+		    
+		    timeUnderOperationHandler.postDelayed(this, timerUpdateDelta);
+		}
+	}
+	public synchronized void startTimeUnderOperationUpdates(){
+		timeUnderOperationDateStart =  Calendar.getInstance().getTime();
+		timerUpdater.run();
+    }
+	public synchronized void stopTimeUnderOperationUpdates(){
+		timeUnderOperationHandler.removeCallbacks(timerUpdater);
+    }
+	public void toggleUnderOperationTimer(){
+		switch(timerUnderOperationState){
+			case STOPPED:
+				timeUnderOperation.setText("00:00:00");
+				timerUnderOperationState=TimerStates.RESETED;
+				break;
+			case RESETED:
+				startTimeUnderOperationUpdates();
+				timerUnderOperationState=TimerStates.RUNNING;			
+				break;
+			case RUNNING:
+				stopTimeUnderOperationUpdates();
+				timerUnderOperationState=TimerStates.STOPPED;
+				break;
+		}
+	}
+	
+	public void vibrate(int duration)
+	 {
+	    vibrator.vibrate(duration);    
+	 }
 }

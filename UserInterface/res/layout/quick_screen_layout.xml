@@ -3,6 +3,7 @@
     android:id="@+id/quick_screen_view"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:layout_alignParentTop="True"
     android:layout_marginLeft="5dp"
     android:layout_marginRight="5dp"
     android:layout_marginTop="5dp"
@@ -22,8 +23,8 @@
     
     	<ImageView
     	    android:id="@+id/fireman_rank"
-    	    android:layout_width="60dp"
-    	    android:layout_height="60dp"
+    	    android:layout_width="50dp"
+    	    android:layout_height="50dp"
     	    android:scaleType="centerInside"
     	    android:src="@drawable/rank_commander" />
     	
@@ -41,7 +42,7 @@
     	    android:layout_height="wrap_content"
     	    android:layout_gravity="center_vertical"
     	    android:layout_marginLeft="5dp"
-    	    android:text="14:43"
+    	    android:text="00:00:00"
     	    android:textSize="25dp" />
     	
     		<LinearLayout
@@ -70,8 +71,8 @@
     	    
 	    		<ImageView
 	    	    android:id="@+id/heart_rate_icon"
-	    	    android:layout_width="40dp"
-	    	    android:layout_height="40dp"
+	    	    android:layout_width="35dp"
+	    	    android:layout_height="35dp"
 				android:layout_gravity="center_vertical"
 	    	    android:scaleType="centerInside"
 	    	    android:src="@drawable/heart_beat" />
@@ -100,7 +101,9 @@
     	<TextView
     	    android:id="@+id/quick_screen_main_text"
     	    android:layout_width="match_parent"
-    	    android:layout_height="wrap_content" />	
+    	    android:layout_height="wrap_content"
+    	    android:lines="2" />
+	
     </RelativeLayout>
     
     

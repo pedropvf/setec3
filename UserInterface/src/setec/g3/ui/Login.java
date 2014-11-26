@@ -26,6 +26,6 @@ public class Login extends Activity {
                 Login.this.startActivity(mainIntent);
                 Login.this.finish();
             }
-        }, SPLASH_DISPLAY_LENGTH*2);
+        }, SPLASH_DISPLAY_LENGTH/2);
     }
 }
